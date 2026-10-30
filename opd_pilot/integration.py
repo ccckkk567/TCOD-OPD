@@ -16,7 +16,14 @@ def plain(value):
     if hasattr(value, "detach"):
         value = value.detach().cpu()
     if hasattr(value, "tolist"):
-        return value.tolist()
+        return plain(value.tolist())
+    if type(value).__module__.startswith("textworld.") and callable(
+        getattr(value, "serialize", None)
+    ):
+        return {
+            "object_type": f"{type(value).__module__}.{type(value).__name__}",
+            "data": plain(value.serialize()),
+        }
     if isinstance(value, dict):
         return {str(key): plain(item) for key, item in value.items()}
     if isinstance(value, (list, tuple)):

@@ -3,6 +3,10 @@
 import json
 import unittest
 from unittest.mock import Mock, patch
+from types import SimpleNamespace
+
+from opd_pilot.diagnostic_backend import TransformersBackend
+from opd_pilot.integration import plain
 
 from orion.scripts.environment_interface_smoke import json_value
 from orion.scripts.model_environment_smoke import action_summary, interact, score_turns
@@ -26,6 +30,7 @@ class ModelEnvironmentSmokeTests(unittest.TestCase):
         fact = encoded["info"]["facts"][0][0]
         self.assertEqual(fact["object_type"], "textworld.logic.Proposition")
         self.assertEqual(fact["data"]["arguments"][0]["name"], "cabinet")
+        self.assertEqual(json.loads(json.dumps(plain({"facts": [proposition]})))["facts"][0], fact)
         with self.assertRaises(TypeError):
             json.dumps(object(), default=json_value)
 
@@ -35,6 +40,24 @@ class ModelEnvironmentSmokeTests(unittest.TestCase):
         )
         self.assertEqual(summary["empty_parsed_actions"], 2)
         self.assertFalse(summary["all_actions_nonempty"])
+
+    def test_sampling_arguments_override_model_defaults(self):
+        from unittest.mock import MagicMock
+
+        backend = TransformersBackend.__new__(TransformersBackend)
+        backend.torch = MagicMock()
+        backend.tokenizer = Mock(pad_token_id=0)
+        backend.model = MagicMock()
+        backend.model.generation_config.eos_token_id = 9
+        backend.model.generate.return_value.__getitem__.return_value.tolist.return_value = [3, 9]
+        settings = dict(temperature=1.0, top_p=1.0, top_k=0, max_new_tokens=512)
+        with patch.dict(
+            "sys.modules", {"transformers": SimpleNamespace(GenerationConfig=SimpleNamespace)}
+        ):
+            backend.generate([1, 2], settings, 42)
+        kwargs = backend.model.generate.call_args.kwargs
+        for key, expected in settings.items():
+            self.assertEqual(kwargs[key], expected)
 
     def test_generation_failure_closes_simulator(self):
         episode = Mock()

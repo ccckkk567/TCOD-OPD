@@ -21,9 +21,11 @@ module purge
 module load python/3.11.9 cuda/12.6.2 gcc/10.5.0 openjdk/17.0.11
 unset PYTHONHOME PYTHONPATH
 export PYTHONNOUSERSITE=1
+exec 9>"$ENV_ROOT/tcod-opd.install.lock"
+flock -s -n 9 || { echo 'Shared environment is being modified'; exit 75; }
 source "$ENV_ROOT/tcod-opd/bin/activate"
 source "$CREDENTIALS_FILE"
-export PYTHONPATH="$CODE_ROOT:$ORION_ROOT/code/webshop"
+export PYTHONPATH="$PWD:$ORION_ROOT/code/webshop"
 export ALFWORLD_DATA="$DATA_ROOT/alfworld"
 export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
 export TMPDIR="/tmp/opd-work-$SLURM_JOB_ID"

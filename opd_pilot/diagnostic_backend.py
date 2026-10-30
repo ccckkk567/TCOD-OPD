@@ -99,7 +99,15 @@ class TransformersBackend:
         )
         with torch.inference_mode():
             tokens = self.model.generate(
-                inputs, attention_mask=torch.ones_like(inputs), generation_config=config
+                inputs,
+                attention_mask=torch.ones_like(inputs),
+                generation_config=config,
+                temperature=settings["temperature"],
+                top_p=settings["top_p"],
+                top_k=settings["top_k"],
+                max_new_tokens=settings["max_new_tokens"],
+                do_sample=True,
+                repetition_penalty=1.0,
             )
         ids = tokens[0, len(prefix) :].tolist()
         eos = config.eos_token_id

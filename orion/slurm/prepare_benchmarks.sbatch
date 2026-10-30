@@ -30,7 +30,9 @@ if [[ -f "$ENV_ROOT/$name/PREPARED.txt" ]]; then
     echo 'Already prepared; inspect existing metadata before changing the environment.'
     exit 0
 fi
-git rev-parse HEAD > "$metadata/driver-revision.txt"
+# Slurm executes a spool copy; the working directory may contain standalone scripts.
+cp -- "$0" "$metadata/submitted-script.sbatch"
+git -C "$CODE_ROOT" rev-parse HEAD > "$metadata/asset-tools-revision.txt"
 [[ -x "$ENV_ROOT/$name/bin/python" ]] || python -m venv "$ENV_ROOT/$name"
 source "$ENV_ROOT/$name/bin/activate"
 python -m pip install --upgrade pip setuptools wheel

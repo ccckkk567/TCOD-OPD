@@ -18,6 +18,9 @@ changes are authorized by the general request to continue local implementation.
 - Data-membership and declared-turn-revision audit, explicitly limited in scope.
 - Task-level paired differences and task-cluster percentile bootstrap, including
   raw per-task points and missing/technical-failure denominators.
+- Independent local-asset Transformers candidate generation and full-vocabulary
+  temperature-scaled conditional cross-scoring, plus a GPU job entry point. Local
+  plumbing tests pass; actual GPU numerics and TCOD-backend equivalence are pending.
 - Earlier launcher error propagation and SwanLab offline/local preservation changes
   already committed before the user's new explicit TCOD-change approval rule.
 
@@ -43,8 +46,9 @@ changes are authorized by the general request to continue local implementation.
 - Full WebShop dependencies/index/runtime compatibility, real ALFWorld/ScienceWorld
   reset/step checks and record-schema mapping. Shared venvs supersede the plan's RPC
   isolation proposal; a new RPC architecture is not an approved requirement.
-- Candidate generation/scoring, replay validation, 2x2 continuation and update
-  interventions. The prefix selector alone does not implement these experiments.
+- GPU validation of candidate generation/scoring, replay validation, 2x2 continuation
+  and update interventions. Standalone candidate code does not execute environment
+  actions or demonstrate training-backend equivalence.
 - Compact array storage, prefix deduplication, cross-student common pools, plotting,
   case reports, automatic job DAG/reconciliation and final research audit.
 

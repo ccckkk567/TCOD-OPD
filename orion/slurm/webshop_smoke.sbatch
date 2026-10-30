@@ -6,7 +6,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
-#SBATCH --time=00:45:00
+#SBATCH --time=00:15:00
 #SBATCH --output=/scratch/prjsnnn0000269/Students/shuming/cjk/logs/tcod-opd/benchmarks/webshop-smoke-%j.log
 set -euo pipefail
 set +x
@@ -20,16 +20,21 @@ export PYTHONNOUSERSITE=1
 exec 9>"$ENV_ROOT/tcod-opd.install.lock"
 flock 9
 source "$ENV_ROOT/tcod-opd/bin/activate"
-export PYTHONPATH="$CODE_ROOT:$ORION_ROOT/code/webshop"
+export PYTHONPATH="$PWD:$ORION_ROOT/code/webshop"
 export TMPDIR="$ORION_ROOT/tmp/webshop-smoke-$SLURM_JOB_ID"
 metadata="$LOG_ROOT/benchmarks/webshop-smoke-$SLURM_JOB_ID"
 mkdir -p "$TMPDIR" "$metadata"
 python -m pip freeze --exclude-editable > "$metadata/before.txt"
 export PIP_CONSTRAINT="$metadata/before.txt"
-if ! python -c 'import importlib.util; raise SystemExit(importlib.util.find_spec("en_core_web_lg") is None)'; then
-    python -m spacy download en_core_web_lg
-fi
+for model in en_core_web_lg en_core_web_sm; do
+    if ! python -c 'import importlib.util, sys; raise SystemExit(importlib.util.find_spec(sys.argv[1]) is None)' "$model"; then
+        python -m spacy download "$model"
+    fi
+done
 python -m pip check
+if [[ "${OPD_WEBSHOP_REUSE_ONLY:-0}" == 1 ]]; then
+    test -f "$DATA_ROOT/webshop/search_engine/INDEX_READY.json"
+fi
 python - "$metadata/index-spec.json" <<'PY'
 import json, os, subprocess, sys
 from pathlib import Path

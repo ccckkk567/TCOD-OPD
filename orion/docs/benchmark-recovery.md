@@ -36,6 +36,26 @@ Local tests cover mirror file selection/reuse/provenance and simulator cleanup
 with doubles. Actual reset/step success requires copied Orion job results. A
 successful smoke is neither task success nor validation of training readiness.
 
+## Missing small spaCy model after successful indexing
+
+Observed log: en_core_web_lg 3.8.0 installed, pip check passed, all four indexes built
+and reopened (1000/100/1000/1000 documents, zero indexing errors). Index log span
+was approximately nine seconds, not 45 minutes. `indexes_100k` is still only 1000
+documents for this small source, not a full dataset. Runtime then failed in WebShop
+engine/goal.py loading en_core_web_sm. Both small and large spaCy packages are needed;
+the scripts previously installed only the large package. No Gym version change is
+justified by the warning preceding this specific missing-model exception.
+
+Both preparation paths now install missing lg and sm models using spaCy's existing
+download command under the frozen package constraints. The recovery submission
+extracts the necessary scripts/helpers from the existing Git object store (no clone
+or checkout mutation), waits afterany for existing opd-* jobs to stop using the shared
+environment, and takes its exclusive lock. Do not submit new environment readers
+while this repair is running. Existing indexes must have INDEX_READY and are reused
+after metadata/open checks. No data download or forced index rebuild occurs.
+The new upper time limit is 15 minutes. Runtime success still needs reset/search
+evidence; community data remains restricted to small environment smoke only.
+
 ## Three-turn interface checks
 
 Observed after the recovery jobs: TextWorld metadata repair and all three imports

@@ -61,9 +61,11 @@ webshop)
     clone_once https://github.com/princeton-nlp/webshop.git "$ORION_ROOT/code/webshop"
     python -m pip install beautifulsoup4 cleantext Flask gdown 'gym==0.24.0' \
         'pyserini==0.17.0' rank_bm25 requests_mock scikit-learn selenium spacy thefuzz faiss-cpu
-    if ! python -c 'import importlib.util; raise SystemExit(importlib.util.find_spec("en_core_web_lg") is None)'; then
-        python -m spacy download en_core_web_lg
-    fi
+    for model in en_core_web_lg en_core_web_sm; do
+        if ! python -c 'import importlib.util, sys; raise SystemExit(importlib.util.find_spec(sys.argv[1]) is None)' "$model"; then
+            python -m spacy download "$model"
+        fi
+    done
     module load openjdk/17.0.11
     python orion/scripts/download_webshop.py "$DATA_ROOT/webshop"
     echo 'WebShop dependencies and small data prepared; search index and simulator validation remain pending.'

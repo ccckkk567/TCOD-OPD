@@ -365,6 +365,19 @@ class SwanlabMonitor(Monitor):
         # Strip None values to avoid overriding swanlab defaults
         init_kwargs = {k: v for k, v in init_kwargs.items() if v is not None}
 
+        mode = self._initialize_sdk(init_kwargs)
+        self._write_local(
+            {
+                "event": "monitor_init",
+                "mode": mode,
+                "experiment": exp_name,
+                "role": role,
+                "sdk_active": self.logger is not None,
+            }
+        )
+
+    def _initialize_sdk(self, init_kwargs):
+        mode = init_kwargs["mode"]
         try:
             self.logger = swanlab.init(**init_kwargs)
         except Exception:
@@ -377,15 +390,7 @@ class SwanlabMonitor(Monitor):
                     self.console_logger.warning("SwanLab unavailable; local JSONL remains active.")
             else:
                 self.console_logger.warning("SwanLab unavailable; local JSONL remains active.")
-        self._write_local(
-            {
-                "event": "monitor_init",
-                "mode": mode,
-                "experiment": exp_name,
-                "role": role,
-                "sdk_active": self.logger is not None,
-            }
-        )
+        return mode
 
     def _write_local(self, record):
         self._metrics.write(

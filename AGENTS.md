@@ -5,6 +5,7 @@
 - Keep one working branch `codex/orion-opd` for this experiment series; avoid unnecessary branches.
 - Remote root: `/scratch/prjsnnn0000269/Students/shuming/cjk`; Slurm account: `prjsnnn0000269`; user: `linz3`.
 - Repositories: `code/`; reusable benchmarks: `data/<benchmark>/`; reusable models: `models/<model-name>/`; environments: `envs/`; containers: `container/`.
+- User approved TCOD's direct-import setup: install benchmark dependencies into the shared `envs/tcod-opd`, not separate benchmark venvs. Serialize shared-environment installs and wait for jobs using it to finish. Preserve reusable data/source assets; only the obsolete benchmark venvs are authorized for removal during migration.
 - No project-specific nesting for shared benchmarks/models. Check existing assets before downloading. Use readable version names only when versions must coexist, no hashes in directory/file names. Record revisions in metadata.
 - Checkpoints and experiment artifacts: `/scratch/prjsnnn0000269/Students/shuming/storage_ext/cjk/{checkpoints,outputs,reports}/tcod-opd/`.
 - Logs: remote root `logs/tcod-opd/<stage>/`; keep per-job logs.

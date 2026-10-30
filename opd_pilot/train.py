@@ -73,10 +73,17 @@ def run(config_path, validate_only=False):
     job = os.environ["SLURM_JOB_ID"]
     load_plugins()
     config = load_config(str(config_path))
-    if config.stages or config.cluster.node_num != 1 or config.cluster.gpu_per_node != 8:
-        raise ValueError("This approved launcher supports the original single-node 8-GPU layout")
-    if torch.cuda.device_count() != 8:
-        raise ValueError("Exactly eight allocated visible GPUs are required")
+    gpu_count = 2 if config.cluster.shared_inference_gpu else 8
+    if config.stages or config.cluster.node_num != 1 or config.cluster.gpu_per_node != gpu_count:
+        raise ValueError("Use an approved single-node resource layout")
+    if torch.cuda.device_count() != gpu_count:
+        raise ValueError(f"Exactly {gpu_count} allocated visible GPUs are required")
+    if config.cluster.shared_inference_gpu:
+        from trinity.common.shared_inference import validate_shared_inference
+
+        validate_shared_inference(config)
+        if any("H200" not in torch.cuda.get_device_name(i) for i in range(gpu_count)):
+            raise ValueError("The two-GPU experiment requires two H200 devices")
     student = model_manifest(config.model.model_path)
     teacher = model_manifest(config.explorer.auxiliary_models[0].model_path)
     env = config.explorer.env_vars
@@ -122,7 +129,7 @@ def run(config_path, validate_only=False):
             namespace=config.ray_namespace,
             include_dashboard=False,
             num_cpus=int(os.environ["SLURM_CPUS_PER_TASK"]),
-            num_gpus=8,
+            num_gpus=gpu_count,
             _temp_dir=str(temporary),
             runtime_env={"env_vars": runtime_env},
         )

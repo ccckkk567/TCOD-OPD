@@ -10,6 +10,17 @@ from opd_pilot.evidence import separate_output
 
 def configure(spec, template):
     config = render(spec, template)
+    if spec.get("layout") == "two-gpu-shared-inference":
+        config["cluster"].update(node_num=1, gpu_per_node=2, shared_inference_gpu=True)
+        config["explorer"]["rollout_model"].update(
+            engine_num=1, tensor_parallel_size=1, gpu_memory_utilization=0.25
+        )
+        config["explorer"]["auxiliary_models"][0].update(
+            engine_num=1, tensor_parallel_size=1, gpu_memory_utilization=0.55
+        )
+        config["trainer"]["ulysses_sequence_parallel_size"] = 1
+    elif spec.get("layout") is not None:
+        raise ValueError("Unknown approved resource layout")
     phase = spec["phase"]
     if phase not in ("smoke-first", "smoke-resume", "pilot"):
         raise ValueError("Unknown approved phase")
@@ -63,7 +74,7 @@ def main():
             dict(
                 status="rendered_not_runtime_validated",
                 phase=spec["phase"],
-                gpu_count=8,
+                gpu_count=config["cluster"]["gpu_per_node"],
                 target_steps=config["trainer"]["total_steps"],
                 schedule_steps=100,
             ),

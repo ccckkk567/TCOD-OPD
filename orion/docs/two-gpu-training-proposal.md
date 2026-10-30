@@ -1,6 +1,6 @@
-# 两张 H200 的 ALFWorld 训练资源方案（待具体批准）
+# 两张 H200 的 ALFWorld 训练资源方案（已批准，待 HPC 验证）
 
-用户已指定训练使用两张 H200，未批准之前的单卡串行改造。
+用户已明确批准此两卡共置方案，未批准之前的单卡串行改造。
 集群指南列明 testqueue 为 H200 队列，使用 --gres=gpu:2；作业内检查实际设备，
 不凭名称假定显存容量，不换收费分区。先2+2恢复验证，原50步pilot以后放行。
 
@@ -23,3 +23,17 @@ teacher上下文/切片、奖励处理、loss、有效训练batch和原更新逻
 虽保留原异步策略，仍不保证与8卡逐样本或数值等价。共享vLLM初始化、显存峰值、
 NCCL同步及world size=1恢复都需要真实HPC验证。不得用两个独立推理job的成功
 来代替此验证。现有两条单卡E0基线可继续并行，不依赖本方案批准或完成。
+
+实现入口为 `cluster.shared_inference_gpu=true`，默认false。一个完整GPU bundle
+承载两个各申请0.5 GPU的actor，并逐一等待初始化、记录和核对实际GPU编号。
+不能把0.5资源份额当成显存隔离；vLLM另设学生0.25、教师0.55的显存预算。
+依据：[Ray placement groups](https://docs.ray.io/en/latest/ray-core/scheduling/placement-group.html)、
+[vLLM per-instance memory budgets](https://docs.vllm.ai/en/v0.7.0/serving/engine_args.html)。
+GPU 0/1是角色示意，实际编号由Ray分配，并非硬编码设备编号。
+
+`submit_alfworld_recovery.sh REVISION` 现在只提交两卡配置：每段2张H200、
+16 CPU、128G内存、4h上限；第一段成功才以afterok放行恢复段。
+这是已批准的2+2工程验证，不自动提交50步pilot。
+run_name为alfworld-s17-two-gpu-smoke，与之前8卡配置产物隔离。
+正式baseline可与本链同时排队。未通过实际初始化/更新/保存/恢复之前不得
+宣称两卡训练已验证；恢复到4步的COMPLETE也不等于逐位恢复等价。

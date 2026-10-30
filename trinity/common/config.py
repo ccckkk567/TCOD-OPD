@@ -610,6 +610,7 @@ class ClusterConfig:
     ray_address: str = "auto"
     node_num: int = 0
     gpu_per_node: int = 0
+    shared_inference_gpu: bool = False  # Student + teacher share a GPU; trainer owns another
 
     # ! DO NOT SET
     total_gpu_num: int = 0

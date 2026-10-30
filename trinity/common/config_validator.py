@@ -221,6 +221,12 @@ class RayClusterConfigValidator(ConfigValidator):
                 for model in config.explorer.auxiliary_models
             )
         cluster.explorer_gpu_num = cluster.rollout_gpu_num + cluster.auxiliary_model_gpu_num
+        if cluster.shared_inference_gpu:
+            from trinity.common.shared_inference import validate_shared_inference
+
+            validate_shared_inference(config)
+            # Keep logical role counts for synchronization, but share physical occupancy.
+            cluster.explorer_gpu_num = 1
         cluster.total_gpu_num = cluster.node_num * cluster.gpu_per_node
         if config.mode in ["explore", "bench", "serve"]:
             if cluster.explorer_gpu_num > cluster.total_gpu_num:

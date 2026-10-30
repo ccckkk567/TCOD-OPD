@@ -156,6 +156,16 @@ class vLLMRolloutModel(BaseInferenceModel):
         )
         self.tokenizer = self.processor.tokenizer
 
+    def shared_device_info(self):
+        """Initialization barrier and allocation evidence for the shared mode."""
+        import ray
+
+        return dict(
+            gpu_ids=ray.get_gpu_ids(),
+            name=torch.cuda.get_device_name(0),
+            total_memory=torch.cuda.get_device_properties(0).total_memory,
+        )
+
     async def prepare(
         self,
     ) -> None:

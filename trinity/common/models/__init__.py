@@ -46,6 +46,11 @@ def create_inference_models(
     from ray.util.scheduling_strategies import PlacementGroupSchedulingStrategy
 
     logger = get_logger(__name__)
+    if config.cluster.shared_inference_gpu:
+        from trinity.common.models.vllm_model import vLLMRolloutModel
+        from trinity.common.shared_inference import create_shared_inference
+
+        return create_shared_inference(config, vLLMRolloutModel)
     engine_num = config.explorer.rollout_model.engine_num
     tensor_parallel_size = config.explorer.rollout_model.tensor_parallel_size
 

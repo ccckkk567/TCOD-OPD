@@ -1,0 +1,8 @@
+# Initial compatibility choices, not a validated lock. Freeze after successful GPU checks.
+verl==0.7.0
+vllm==0.10.2
+torch==2.8.0+cu128
+torchvision==0.23.0+cu128
+torchaudio==2.8.0+cu128
+transformers>=4.51.0,<5
+ray==2.50.0

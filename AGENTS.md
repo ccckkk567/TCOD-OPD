@@ -9,7 +9,7 @@
 - Checkpoints and experiment artifacts: `/scratch/prjsnnn0000269/Students/shuming/storage_ext/cjk/{checkpoints,outputs,reports}/tcod-opd/`.
 - Logs: remote root `logs/tcod-opd/<stage>/`; keep per-job logs.
 - Credentials are already exported in remote `dep-prep-credentials.env`: `SWANLAB_API_KEY` and `HF_TOKEN`. Source only at runtime with tracing disabled. Never copy, print, commit, or ask user to paste secrets.
-- Prefer existing compatible Docker images through Apptainer. If unavailable, use provided modules plus venv. Environment installation/compilation belongs on GPU `testqueue`; HF downloads may use CPU `ioqueue`.
+- Current user decision: configure from TCOD README using provided Python modules plus venv, since no TCOD-author-validated paper image was identified. Do not substitute a generic Trinity container. Environment installation/compilation belongs on GPU `testqueue`; HF downloads may use CPU `ioqueue`.
 - Login node: lightweight file management and Slurm submission/status only. No installs, heavy downloads, imports/tests/training or AI agents.
 - GPU queue `testqueue`, CPU queue `ioqueue`. Do not silently switch to other queues. Testqueue jobs must stay within 18h.
 - Necessary correctness tests only. Do not change Vanilla OPD algorithm or add teacher actions to student training; diagnostics remain separate.

@@ -1,12 +1,41 @@
 """Failure and alignment checks for the independent one-GPU diagnostic."""
 
+import json
 import unittest
 from unittest.mock import Mock, patch
 
-from orion.scripts.model_environment_smoke import interact, score_turns
+from orion.scripts.environment_interface_smoke import json_value
+from orion.scripts.model_environment_smoke import action_summary, interact, score_turns
 
 
 class ModelEnvironmentSmokeTests(unittest.TestCase):
+    def test_nested_textworld_facts_preserved(self):
+        # Match TextWorld's public serialize contract without installing a simulator locally.
+        proposition = type(
+            "Proposition",
+            (),
+            {
+                "__module__": "textworld.logic",
+                "serialize": lambda self: {
+                    "name": "open",
+                    "arguments": [{"name": "cabinet", "type": "c"}],
+                },
+            },
+        )()
+        encoded = json.loads(json.dumps({"info": {"facts": [[proposition]]}}, default=json_value))
+        fact = encoded["info"]["facts"][0][0]
+        self.assertEqual(fact["object_type"], "textworld.logic.Proposition")
+        self.assertEqual(fact["data"]["arguments"][0]["name"], "cabinet")
+        with self.assertRaises(TypeError):
+            json.dumps(object(), default=json_value)
+
+    def test_empty_actions_are_not_a_clean_pass(self):
+        summary = action_summary(
+            [dict(turns=[dict(transition=dict(action=action)) for action in ["look", "", " "]])]
+        )
+        self.assertEqual(summary["empty_parsed_actions"], 2)
+        self.assertFalse(summary["all_actions_nonempty"])
+
     def test_generation_failure_closes_simulator(self):
         episode = Mock()
         backend = Mock()

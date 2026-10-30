@@ -55,6 +55,18 @@ def score_turns(episodes, backend):
     return count
 
 
+def action_summary(episodes):
+    """Report empty parser results without changing actions or simulator calls."""
+    turns = [turn for episode in episodes for turn in episode["turns"]]
+    empty = sum(not str(turn["transition"]["action"] or "").strip() for turn in turns)
+    return dict(
+        total_turns=len(turns),
+        empty_parsed_actions=empty,
+        all_actions_nonempty=bool(turns) and empty == 0,
+        semantic_action_validity_validated=False,
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("benchmark", choices=("alfworld", "scienceworld"))
@@ -109,8 +121,14 @@ def main():
                 raise ValueError("Student artifact benchmark/model identity mismatch")
             count = score_turns(result["episodes"], TransformersBackend(teacher))
             write_json(args.output / "scored.json", result)
+            actions = action_summary(result["episodes"])
             status = dict(
-                status="diagnostic_interaction_and_scoring_passed",
+                status=(
+                    "diagnostic_completed_with_action_format_failures"
+                    if actions["empty_parsed_actions"]
+                    else "diagnostic_interaction_and_scoring_passed"
+                ),
+                action_summary=actions,
                 benchmark=args.benchmark,
                 episodes=len(result["episodes"]),
                 scored_turns=count,
@@ -123,6 +141,7 @@ def main():
                 training_validated=False,
                 recovery_validated=False,
                 task_success_claimed=False,
+                sampling_parameter_equivalence_validated=False,
             )
             write_json(args.output / "status.json", status)
             print(json.dumps(status), flush=True)

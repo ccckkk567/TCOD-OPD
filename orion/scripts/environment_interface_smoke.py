@@ -45,6 +45,15 @@ def json_value(value):
     # Simulator info can contain NumPy arrays/scalars. Preserve values, not repr strings.
     if hasattr(value, "tolist"):
         return value.tolist()
+    # TextWorld facts (Proposition), actions and game metadata expose structured
+    # serialization. Keep their content rather than discarding facts or using repr.
+    if type(value).__module__.startswith("textworld.") and callable(
+        getattr(value, "serialize", None)
+    ):
+        return {
+            "object_type": f"{type(value).__module__}.{type(value).__name__}",
+            "data": value.serialize(),
+        }
     raise TypeError(f"Unsupported simulator metadata: {type(value).__name__}")
 
 

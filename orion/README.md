@@ -1,6 +1,8 @@
 # Orion Vanilla OPD
 
-Current stage: source environment preparation. User returned completed CPU probe 180494 and GPU probe 180495 on 2026-10-30. H200 and driver 580.126.20 were observed; Python 3.11.9, CUDA 12.6.2 and GCC 10.5.0 modules are available. No training environment is validated and no experiment has run. Network probes showed intermittent timeouts; successful homepage access does not establish model-download or SwanLab authentication success.
+Current stage: basic GPU environment validated; model and benchmark preparation next. User returned the successful installation log for job 180496 on 2026-10-30 (exit 0), after CPU probe 180494 and GPU probe 180495. H200 and driver 580.126.20 were observed. Network probes showed intermittent timeouts; successful homepage access does not establish model-download or SwanLab authentication success. No model-level OPD check or experiment has run.
+
+Installation evidence: Python 3.11.9, Torch 2.8.0+cu128, vLLM 0.10.2, veRL 0.7.0, FlashAttention 2.8.1, Transformers 4.57.6, Ray 2.50.0 and SwanLab 0.10.3. FlashAttention compiled successfully with CUDA 12.6.2; dependency checks, imports, attention comparison against the math implementation, attention backward and launcher help all passed. `ENV_INSTALLED.json` was written. Its `opd_ready: false` deliberately leaves model generation, teacher token scoring, OPD updates and recovery unvalidated. The compiler/runtime version difference passed this basic check only.
 
 The user controls the remote terminal. Local changes travel through the user's GitHub repo; never clone the upstream repo as the HPC experiment checkout.
 
@@ -14,9 +16,9 @@ Create `logs/tcod-opd` first, then submit `slurm/bootstrap.sbatch` (or paste its
 
 For an already cloned checkout, run `bash orion/scripts/submit_probe.sh` on the login node. It submits two short capability checks, on ioqueue and testqueue. Copy back `logs/tcod-opd/probe/cpu-<job>.log` and `gpu-<job>.log`. Checks report available container files, modules, device/driver, network access and directory visibility without installing anything or printing keys. Individual unavailable capabilities are reported, not treated as a training failure. Do not run both submission methods: that would duplicate probes.
 
-## Next stages (not implemented/validated yet)
+## Stage sequence
 
-1. User selected README-based source installation, not a generic Trinity container. `install_env.sbatch` prepares `envs/tcod-opd` on testqueue and runs a basic attention forward/backward check. Full model and OPD checks remain subsequent gates.
+1. Completed basic README-based source installation in `envs/tcod-opd` on testqueue (job 180496), including attention forward/backward checks. Full model and OPD checks remain subsequent gates.
 2. Download/reuse Qwen3-1.7B, Qwen3-4B, Qwen3-8B and Qwen3-30B-A3B-Instruct-2507 on ioqueue, at most two concurrent downloads.
 3. Prepare ALFWorld, WebShop and ScienceWorld independently. Close the ALFWorld loop first.
 4. Patch failure propagation, behavior records and SwanLab; validate token scoring and small update/recovery.

@@ -6,7 +6,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
-#SBATCH --time=06:00:00
+#SBATCH --time=02:00:00
 #SBATCH --array=0-2%1
 #SBATCH --output=/scratch/prjsnnn0000269/Students/shuming/cjk/logs/tcod-opd/benchmarks/prepare-%A_%a.log
 set -euo pipefail

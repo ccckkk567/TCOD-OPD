@@ -22,3 +22,4 @@
 - Explicit approval on 2026-10-30: Trainer exceptions must propagate after cleanup; a run-specific stop marker may stop at an update boundary using the existing checkpoint path, recording partial completion. Preserve sampling/loss/optimizer and normal update order.
 
 - Explicit approval on 2026-10-30: generate 2+2 recovery-smoke and 50-update pilot configurations, keep an LR schedule horizon of 100 steps, save at 10/25/50, use SwanLab and recording, and preserve the upstream 8-GPU topology and other training/sampling parameters. Optional TrainerConfig.schedule_steps/save_steps and their synchronization/save checks implement this decision without changing defaults.
+- Explicit approval on 2026-10-30: a pinned Hugging Face community mirror may supply WebShop small files for environment smoke only. Record provenance and do not claim byte equivalence with the official Drive files or use this approval for formal training/evaluation data substitution.

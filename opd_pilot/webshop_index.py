@@ -35,6 +35,7 @@ def validate(spec):
 
 def prepare(spec):
     repo, data, revision, files = validate(spec)
+    asset = json.loads((data / "asset.json").read_text(encoding="utf-8"))
     for name in files:
         path = data / name
         link_existing_or_new(repo / "data" / name, path)
@@ -65,6 +66,8 @@ def prepare(spec):
             ["bash", str(repo / "search_engine/run_indexing.sh")], cwd=search, env=env, check=True
         )
         result = dict(source_revision=revision, variant="small", data_files=files, indexes={})
+    result["usage_scope"] = asset.get("usage_scope", "unverified")
+    result["data_provenance"] = asset.get("provenance", {})
     from pyserini.search.lucene import LuceneSearcher
 
     for suffix in ("", "_100", "_1k", "_100k"):

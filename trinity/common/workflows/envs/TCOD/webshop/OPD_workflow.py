@@ -4,10 +4,10 @@
 from dataclasses import asdict
 from typing import List, Optional
 
+from opd_pilot.integration import episode_trace
 from trinity.common.experience import Experience
 from trinity.common.models.model import ModelWrapper
 from trinity.common.workflows import WORKFLOWS, Task, Workflow
-
 from trinity.common.workflows.envs.TCOD.webshop.utils import (
     HISTORY_LENGTH,
     WEBSHOP_TEMPLATE,
@@ -20,6 +20,7 @@ from trinity.common.workflows.envs.TCOD.webshop.utils import (
     parse_action,
     validate_action,
 )
+
 
 @WORKFLOWS.register_module("OPD_webshop_workflow")
 class OnPolicyDistillVerlAgentWebshopWorkflow(Workflow):
@@ -44,8 +45,7 @@ class OnPolicyDistillVerlAgentWebshopWorkflow(Workflow):
         self.reset(task)
 
         assert (
-            self.auxiliary_model_wrappers is not None
-            and len(self.auxiliary_model_wrappers) >= 1
+            self.auxiliary_model_wrappers is not None and len(self.auxiliary_model_wrappers) >= 1
         ), "On-policy distillation requires at least one auxiliary model as teacher."
         self.teacher_model = self.auxiliary_model_wrappers[0]
 
@@ -81,17 +81,22 @@ class OnPolicyDistillVerlAgentWebshopWorkflow(Workflow):
         all_turn_responses: List[Experience] = []
 
         for rollout_idx in range(self.repeat_times):
-            rollout_responses = await self._run_episode(
-                session_id=session_id,
-                run_id=self.run_id_base + rollout_idx,
-            )
+            with episode_trace(self.task, "webshop") as trace:
+                self._opd_trace = trace
+                rollout_responses = await self._run_episode(
+                    session_id=session_id,
+                    run_id=self.run_id_base + rollout_idx,
+                )
             all_turn_responses.extend(rollout_responses)
 
         return all_turn_responses
 
-    async def _run_episode(self, session_id: int, run_id: int) -> List[Experience]:
+    async def _run_episode(self, session_id: int, run_id: int) -> List[Experience]:  # noqa: C901
+        trace = getattr(self, "_opd_trace", None)
         self.env.reset(session=session_id)
         observation = self.env.observation
+        if trace is not None:
+            trace.reset(observation, None)
         self._env_done = False
         self._env_rounds = 0
         self._final_reward = 0.0
@@ -130,8 +135,12 @@ class OnPolicyDistillVerlAgentWebshopWorkflow(Workflow):
 
             memory = memory + [{"role": "user", "content": user_content}]
 
+            if trace is not None:
+                trace.prompt(memory, kwargs)
             responses = await self.model.chat_async(memory, **kwargs)
             response = responses[0]
+            if trace is not None:
+                trace.generated(response)
             response_text = response.response_text or ""
             memory.append({"role": "assistant", "content": response_text})
 
@@ -146,12 +155,18 @@ class OnPolicyDistillVerlAgentWebshopWorkflow(Workflow):
             action_valid, error_msg = validate_action(action, available_actions)
             history.append(_format_history(formatted_observation, r + 1, action))
 
+            if trace is not None:
+                trace.action(action)
             if action_valid:
                 observation, reward, done, _ = self.env.step(action)
             else:
                 observation = error_msg
                 reward = 0.0
                 done = False
+
+            if trace is not None:
+                trace.step(response, action, observation, reward, done, _ if action_valid else None)
+                trace.action_valid(action_valid)
 
             if done:
                 self._env_done = True
@@ -161,8 +176,9 @@ class OnPolicyDistillVerlAgentWebshopWorkflow(Workflow):
         else:
             self._env_rounds = self.max_env_steps
 
-
         per_turn_kl_sums: List[float] = []
+        if trace is not None:
+            trace.scoring(self.temperature)
         for i, response in enumerate(turn_responses):
             teacher_logprobs = await self.teacher_model.logprobs_async(
                 tokens=response.tokens.tolist(),
@@ -180,6 +196,8 @@ class OnPolicyDistillVerlAgentWebshopWorkflow(Workflow):
             )
 
             response.teacher_logprobs = teacher_resp_logprobs
+            if trace is not None:
+                trace.scored(response)
 
             if response.metrics is None:
                 response.metrics = {}
@@ -200,4 +218,6 @@ class OnPolicyDistillVerlAgentWebshopWorkflow(Workflow):
             last_response.metrics["kl_divergence"] = trajectory_kl_divergence
             last_response.metrics["session_id"] = float(session_id)
 
+        if trace is not None:
+            trace.finished(self._final_reward)
         return turn_responses

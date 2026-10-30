@@ -33,6 +33,20 @@ REQUIRED = {
         "effective_token_count",
     ),
 }
+REQUIRED["update_attempt"] = (
+    "update_attempt_uid",
+    "update_student_revision",
+    "consumed_turn_uids",
+    "mask",
+    "advantage",
+    "effective_token_count",
+)
+REQUIRED["update_failure"] = (
+    "update_failure_uid",
+    "update_attempt_uid",
+    "status",
+    "exception_type",
+)
 
 
 class Recorder:
@@ -127,10 +141,12 @@ class Recorder:
 
 def audit(root):
     """Check completed shards and cross-worker episode/turn/update references offline."""
-    counts = dict.fromkeys(REQUIRED, 0)
+    counts = dict.fromkeys(("episode", "turn", "update"), 0)
     identifiers = {kind: set() for kind in REQUIRED}
     episode_refs = set()
     turn_refs = set()
+    attempt_refs = set()
+    completed_attempts = set()
     shards = sorted(path for path in Path(root).iterdir() if path.is_dir())
     if not shards:
         raise ValueError("No record shards found")
@@ -149,17 +165,29 @@ def audit(root):
                 if not isinstance(uid, str) or not uid or uid in identifiers[kind]:
                     raise ValueError(f"Invalid or duplicate {kind} ID: {uid}")
                 identifiers[kind].add(uid)
-                counts[kind] += 1
+                counts[kind] = counts.get(kind, 0) + 1
                 count += 1
                 if kind == "turn":
                     episode_refs.add(evidence["episode_uid"])
-                if kind == "update":
+                if kind in ("update", "update_attempt"):
                     turn_refs.update(evidence["consumed_turn_uids"])
+                if kind in ("update", "update_failure") and "update_attempt_uid" in evidence:
+                    attempt = evidence["update_attempt_uid"]
+                    if attempt in completed_attempts:
+                        raise ValueError("Multiple terminal records for one update attempt")
+                    completed_attempts.add(attempt)
+                    attempt_refs.add(attempt)
         if complete["records"] != count:
             raise ValueError(f"Record count mismatch in {shard}")
     if episode_refs - identifiers["episode"] or turn_refs - identifiers["turn"]:
         raise ValueError("Dangling episode or consumed-turn references")
-    return {"shards": len(shards), "records": counts}
+    if attempt_refs - identifiers["update_attempt"]:
+        raise ValueError("Dangling update-attempt reference")
+    return {
+        "shards": len(shards),
+        "records": counts,
+        "unresolved_update_attempts": sorted(identifiers["update_attempt"] - completed_attempts),
+    }
 
 
 def main():

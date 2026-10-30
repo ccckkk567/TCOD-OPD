@@ -14,20 +14,21 @@ Algorithm:
 from dataclasses import asdict
 from typing import List, Optional
 
+from opd_pilot.integration import episode_trace
 from trinity.common.experience import Experience
 from trinity.common.models.model import ModelWrapper
 from trinity.common.workflows import WORKFLOWS, Task, Workflow
-
 from trinity.common.workflows.envs.TCOD.alfworld.utils import (
-    ALFWORLD_TEMPLATE_NO_HIS,
     ALFWORLD_TEMPLATE,
+    ALFWORLD_TEMPLATE_NO_HIS,
     HISTORY_LENGTH,
-    parse_action,
-    format_observation,
+    _create_alfworld_env,
     _extract_task,
     _format_history,
-    _create_alfworld_env,
+    format_observation,
+    parse_action,
 )
+
 
 @WORKFLOWS.register_module("OPD_alfworld_workflow")
 class OnPolicyDistillVerlAgentAlfworldWorkflow(Workflow):
@@ -65,8 +66,7 @@ class OnPolicyDistillVerlAgentAlfworldWorkflow(Workflow):
         self.reset(task)
 
         assert (
-            self.auxiliary_model_wrappers is not None
-            and len(self.auxiliary_model_wrappers) >= 1
+            self.auxiliary_model_wrappers is not None and len(self.auxiliary_model_wrappers) >= 1
         ), "On-policy distillation requires at least one auxiliary model as teacher."
         self.teacher_model = self.auxiliary_model_wrappers[0]
 
@@ -110,15 +110,20 @@ class OnPolicyDistillVerlAgentAlfworldWorkflow(Workflow):
         return []
 
     async def run_async(self) -> List[Experience]:
-        game_file_path = self.task_desc
-        env = _create_alfworld_env(game_file_path)
-        try:
-            return await self._run_episode(env)
-        finally:
-            env.close()
+        with episode_trace(self.task, "alfworld") as trace:
+            self._opd_trace = trace
+            game_file_path = self.task_desc
+            env = _create_alfworld_env(game_file_path)
+            try:
+                return await self._run_episode(env)
+            finally:
+                env.close()
 
-    async def _run_episode(self, env) -> List[Experience]:
+    async def _run_episode(self, env) -> List[Experience]:  # noqa: C901
+        trace = getattr(self, "_opd_trace", None)
         observation, info = env.reset()
+        if trace is not None:
+            trace.reset(observation, info)
         self._env_done = False
         self._env_rounds = 0
 
@@ -147,9 +152,7 @@ class OnPolicyDistillVerlAgentAlfworldWorkflow(Workflow):
                 )
             else:
                 action_history_str = "\n".join(
-                    history[-HISTORY_LENGTH:]
-                    if len(history) >= HISTORY_LENGTH
-                    else history
+                    history[-HISTORY_LENGTH:] if len(history) >= HISTORY_LENGTH else history
                 )
                 user_content = ALFWORLD_TEMPLATE.format(
                     task_description=task_description,
@@ -164,8 +167,12 @@ class OnPolicyDistillVerlAgentAlfworldWorkflow(Workflow):
             memory = memory + [{"role": "user", "content": user_content}]
 
             # Step 1: Student samples this turn (same pattern as OnPolicyDistillWorkflow)
+            if trace is not None:
+                trace.prompt(memory, kwargs)
             responses = await self.model.chat_async(memory, **kwargs)
             response = responses[0]
+            if trace is not None:
+                trace.generated(response)
             response_text = response.response_text or ""
             memory.append({"role": "assistant", "content": response_text})
 
@@ -178,7 +185,11 @@ class OnPolicyDistillVerlAgentAlfworldWorkflow(Workflow):
 
             action = parse_action(response_text)
             history.append(_format_history(format_obs, r + 1, action))
+            if trace is not None:
+                trace.action(action)
             observation, reward, done, info = env.step(action)
+            if trace is not None:
+                trace.step(response, action, observation, reward, done, info)
             if done:
                 self._env_done = True
                 self._env_rounds = r + 1
@@ -192,6 +203,8 @@ class OnPolicyDistillVerlAgentAlfworldWorkflow(Workflow):
         # response.tokens is the full sequence for this turn: [prefix | response], where
         # prefix = system + obs_1 + resp_1 + ... + obs_t (same input as student had).
         per_turn_kl_sums: List[float] = []
+        if trace is not None:
+            trace.scoring(self.temperature)
         for i, response in enumerate(turn_responses):
             teacher_logprobs = await self.teacher_model.logprobs_async(
                 tokens=response.tokens.tolist(),  # full input = prefix + student's response
@@ -209,6 +222,8 @@ class OnPolicyDistillVerlAgentAlfworldWorkflow(Workflow):
             )
 
             response.teacher_logprobs = teacher_resp_logprobs
+            if trace is not None:
+                trace.scored(response)
 
             if response.metrics is None:
                 response.metrics = {}
@@ -229,4 +244,6 @@ class OnPolicyDistillVerlAgentAlfworldWorkflow(Workflow):
             last_response.metrics["env_done"] = 1.0 if self._env_done else 0.0
             last_response.metrics["kl_divergence"] = trajectory_kl_divergence
 
+        if trace is not None:
+            trace.finished(self._final_reward)
         return turn_responses

@@ -32,6 +32,7 @@ from verl.utils.fs import copy_local_path_from_hdfs
 from verl.utils.metric import reduce_metrics
 from verl.workers.config import FSDPEngineConfig
 
+from opd_pilot.integration import update_trace
 from trinity.algorithm import ADVANTAGE_FN, ALGORITHM_TYPE, KL_FN
 from trinity.algorithm.utils import prefix_metrics
 from trinity.common.config import Config
@@ -570,7 +571,8 @@ class VerlPPOTrainerWrapper(RayPPOTrainer, TrainEngineWrapper):
             ):
                 # update actor
                 with marked_timer("update_actor", timing_raw, color="red"):
-                    actor_output = self._update_actor(batch)
+                    with update_trace(batch, batch_exps, self.global_steps):
+                        actor_output = self._update_actor(batch)
                 actor_output_metrics = reduce_metrics(actor_output.meta_info["metrics"])
                 metrics.update(actor_output_metrics)
 

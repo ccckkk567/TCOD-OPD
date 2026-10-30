@@ -44,8 +44,9 @@ derived log directory into logs/tcod-opd while preserving its original behavior.
   explicit decision and actual loader validation, not an unnoticed edit.
 - Original GPU arithmetic is 4 student rollout GPUs, 2 teacher GPUs, 2 trainer GPUs.
   A smaller Orion layout needs explicit resource choices and a real memory smoke.
-- Recording actual messages/tokens/teacher scores and consumed update IDs requires
-  instrumentation at real workflow/trainer calls. No such code was changed here.
+- Recording hooks for all three OPD workflows and the common actor-update call
+  are approved and implemented, disabled by default. Enable them consistently in
+  trainer and explorer workers and validate on GPU before pilot use; see recording.md.
 - These templates retain upstream monitor selection; SwanLab and log routing must
   be made explicit in the eventual approved run configuration.
 - No evaluation/recovery success is inferred from this validation or from unit tests.

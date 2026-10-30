@@ -12,7 +12,9 @@ changes are authorized by the general request to continue local implementation.
   per-job metadata and GPU recheck. WebShop search index is still pending.
 - ALFWorld disjoint pilot split preparation from training games.
 - Independent per-worker evidence recorder, failure propagation, offline audit and
-  lossless merge. Evidence is not yet emitted by TCOD model/trainer call sites.
+  lossless merge. Explicitly approved opt-in hooks now observe all three benchmark
+  OPD workflows and the common actor-update call. Local call-site tests pass;
+  real distributed/GPU record generation remains unvalidated.
 - Descriptive outcome analysis with explicit unknown and technical-failure counts.
 - Fixed random development-prefix selection from actual recorded messages/tokens.
 - Data-membership and declared-turn-revision audit, explicitly limited in scope.
@@ -39,8 +41,8 @@ changes are authorized by the general request to continue local implementation.
 
 ## Pending work requiring a concrete integration decision or runtime evidence
 
-- TCOD record emission at actual student/teacher/trainer calls: propose exact files
-  and payloads and obtain explicit approval before editing the original execution.
+- Validate approved record hooks with real tensor serialization, environment info,
+  Ray worker settings, trainer consumption and IO overhead on a short GPU run.
 - Preserve TCOD's existing environment/action/reward interpretation. Any proposed
   changes to done/success, teacher scoring or abnormal-sample handling need separate
   evidence and explicit approval. The attempted ALFWorld edit was withdrawn.
@@ -49,7 +51,7 @@ changes are authorized by the general request to continue local implementation.
 - Real token-position/temperature comparison, generation/update/recovery smoke,
   complete checkpoint/export checks and actual independent evaluations.
 - Full WebShop dependencies/index/runtime compatibility, real ALFWorld/ScienceWorld
-  reset/step checks and record-schema mapping. Shared venvs supersede the plan's RPC
+  reset/step checks and runtime record-schema validation. Shared venvs supersede the plan's RPC
   isolation proposal; a new RPC architecture is not an approved requirement.
 - GPU validation of candidate generation/scoring, replay validation, 2x2 continuation
   and update interventions. Standalone candidate code does not execute environment

@@ -4,6 +4,7 @@
 from dataclasses import asdict
 from typing import List, Optional
 
+from opd_pilot.integration import episode_trace
 from trinity.common.experience import Experience
 from trinity.common.models.model import ModelWrapper
 from trinity.common.workflows import WORKFLOWS, Task, Workflow
@@ -43,8 +44,7 @@ class OnPolicyDistillVerlAgentScienceworldWorkflow(Workflow):
         self.reset(task)
 
         assert (
-            self.auxiliary_model_wrappers is not None
-            and len(self.auxiliary_model_wrappers) >= 1
+            self.auxiliary_model_wrappers is not None and len(self.auxiliary_model_wrappers) >= 1
         ), "On-policy distillation requires at least one auxiliary model as teacher."
         self.teacher_model = self.auxiliary_model_wrappers[0]
 
@@ -75,18 +75,23 @@ class OnPolicyDistillVerlAgentScienceworldWorkflow(Workflow):
         return []
 
     async def run_async(self) -> List[Experience]:
-        env = _create_scienceworld_env(
-            self.task_desc,
-            max_env_steps=self.max_env_steps,
-            generate_gold_path=False,
-        )
-        try:
-            return await self._run_episode(env)
-        finally:
-            env.close()
+        with episode_trace(self.task, "scienceworld") as trace:
+            self._opd_trace = trace
+            env = _create_scienceworld_env(
+                self.task_desc,
+                max_env_steps=self.max_env_steps,
+                generate_gold_path=False,
+            )
+            try:
+                return await self._run_episode(env)
+            finally:
+                env.close()
 
-    async def _run_episode(self, env) -> List[Experience]:
+    async def _run_episode(self, env) -> List[Experience]:  # noqa: C901
+        trace = getattr(self, "_opd_trace", None)
         observation, info, task_description = _reset_scienceworld_env(env)
+        if trace is not None:
+            trace.reset(observation, info)
         self._env_done = False
         self._env_rounds = 0
         self._final_reward = 0.0
@@ -103,9 +108,7 @@ class OnPolicyDistillVerlAgentScienceworldWorkflow(Workflow):
         for r in range(self.max_env_steps):
             format_obs = format_observation(observation)
             action_templates, objects = _get_compact_action_info(env)
-            reformatted_actions = ", ".join(
-                f"'{s}'" for s in action_templates if s != "help"
-            )
+            reformatted_actions = ", ".join(f"'{s}'" for s in action_templates if s != "help")
             reformatted_objects = ", ".join(f"'{s}'" for s in objects)
 
             if len(history) < HISTORY_LENGTH:
@@ -130,8 +133,12 @@ class OnPolicyDistillVerlAgentScienceworldWorkflow(Workflow):
 
             memory = memory + [{"role": "user", "content": user_content}]
 
+            if trace is not None:
+                trace.prompt(memory, kwargs)
             responses = await self.model.chat_async(memory, **kwargs)
             response = responses[0]
+            if trace is not None:
+                trace.generated(response)
             response_text = response.response_text or ""
             memory.append({"role": "assistant", "content": response_text})
 
@@ -144,7 +151,11 @@ class OnPolicyDistillVerlAgentScienceworldWorkflow(Workflow):
 
             action = parse_action(response_text)
             history.append(_format_history(format_obs, r + 1, action))
+            if trace is not None:
+                trace.action(action)
             observation, reward, done, info = env.step(action)
+            if trace is not None:
+                trace.step(response, action, observation, reward, done, info)
             best_score = max(best_score, info.get("score", best_score + reward))
             if done:
                 self._env_done = True
@@ -156,6 +167,8 @@ class OnPolicyDistillVerlAgentScienceworldWorkflow(Workflow):
         self._final_reward = best_score / 100.0
 
         per_turn_kl_sums: List[float] = []
+        if trace is not None:
+            trace.scoring(self.temperature)
         for i, response in enumerate(turn_responses):
             teacher_logprobs = await self.teacher_model.logprobs_async(
                 tokens=response.tokens.tolist(),
@@ -173,6 +186,8 @@ class OnPolicyDistillVerlAgentScienceworldWorkflow(Workflow):
             )
 
             response.teacher_logprobs = teacher_resp_logprobs
+            if trace is not None:
+                trace.scored(response)
 
             if response.metrics is None:
                 response.metrics = {}
@@ -192,4 +207,6 @@ class OnPolicyDistillVerlAgentScienceworldWorkflow(Workflow):
             last_response.metrics["env_done"] = 1.0 if self._env_done else 0.0
             last_response.metrics["kl_divergence"] = trajectory_kl_divergence
 
+        if trace is not None:
+            trace.finished(self._final_reward, score_final=info.get("score"), score_best=best_score)
         return turn_responses

@@ -14,7 +14,7 @@ def read_records(root):
         with path.open(encoding="utf-8") as stream:
             for line in stream:
                 item = json.loads(line)
-                result[item["kind"]].append(item["evidence"])
+                result.setdefault(item["kind"], []).append(item["evidence"])
     return result
 
 

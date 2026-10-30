@@ -1,0 +1,17 @@
+{
+  "hypothesis": null,
+  "scope": null,
+  "holdout_tasks": null,
+  "exploration_tasks": null,
+  "prefix_rule": null,
+  "candidate_rule": null,
+  "seeds": {"environment": null, "candidate": null, "continuation": null},
+  "primary_metrics": null,
+  "budget": {"tasks": null, "repeats": null, "max_env_steps": null, "max_new_tokens": null},
+  "exclusions": null,
+  "statistics": null,
+  "interpretation": null,
+  "evidence_references": null,
+  "approval_reference": null,
+  "confirmation_results_seen": null
+}

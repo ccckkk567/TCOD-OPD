@@ -38,10 +38,12 @@ an untested 25+25 resume strategy.
 - Done/reward, overflow/dummy behavior, sample filtering, teacher slicing, loss and
   optimizer are preserved. Plan suggestions to change these are not authorized
   by general instructions to continue. Unknown success is never invented.
-- E5 update_probe (teacher-score interventions/control updates) and E6 follow-ups
-  are conditional on findings in the plan. They are not implemented or run here:
-  a concrete intervention requires approval before changing TCOD update behavior.
-  No success-returning stub exists.
+- E5 update_probe now provides offline bundle freezing, score alignment, checkpoint
+  structure/content auditing, branch planning and descriptive comparisons. E6
+  confirmation provides protocol/task-list locking and integrity verification.
+  Native Experience capture/reconstruction, real update replay and formal E5/E6
+  execution remain unimplemented/unrun and need the staged approvals described in
+  native_update_path.md. No mock update or success-returning execution stub exists.
 - No automatic resubmission, background cluster monitor or live-checkpoint export
   is enabled. A new attempt follows inspection of failed/ambiguous registry entries.
   Export only after checkpoint writers have stopped.

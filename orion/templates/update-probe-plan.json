@@ -1,0 +1,14 @@
+{
+  "checkpoint": null,
+  "world_size": null,
+  "batch": null,
+  "scores": {"A": null, "B": null},
+  "branches_root": null,
+  "hypothesis": null,
+  "primary_metrics": null,
+  "probe_protocol": null,
+  "budget": null,
+  "source_config": null,
+  "approval": {"offline_preparation": true, "native_replay": false, "formal_AB": false},
+  "scoring_conditions": {"A": null, "B": null}
+}

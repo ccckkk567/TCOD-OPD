@@ -1,0 +1,109 @@
+[
+  {
+    "field": "buffer.explorer_input.taskset.path",
+    "before": "/path/to/alfworld_data/train_expert.jsonl",
+    "after": "/scratch/prjsnnn0000269/Students/shuming/storage_ext/cjk/outputs/tcod-opd/protocols/alfworld/pilot-v1/train_pilot.jsonl"
+  },
+  {
+    "field": "buffer.total_steps",
+    "before": 250,
+    "after": 50
+  },
+  {
+    "field": "buffer.trainer_input.experience_buffer.path",
+    "before": "sqlite:///alfworld_opd_buffer.db",
+    "after": "sqlite:////scratch/prjsnnn0000269/Students/shuming/storage_ext/cjk/outputs/tcod-opd/alfworld-s17-pilot/experience.db"
+  },
+  {
+    "field": "checkpoint_root_dir",
+    "before": "./checkpoints",
+    "after": "/scratch/prjsnnn0000269/Students/shuming/storage_ext/cjk/checkpoints"
+  },
+  {
+    "field": "explorer.auxiliary_models.0.model_path",
+    "before": "/path/to/teacher",
+    "after": "/scratch/prjsnnn0000269/Students/shuming/cjk/models/Qwen3-8B"
+  },
+  {
+    "field": "explorer.env_vars.OPD_RECORD_ROOT",
+    "before": null,
+    "after": "/scratch/prjsnnn0000269/Students/shuming/storage_ext/cjk/outputs/tcod-opd/alfworld-s17-pilot/pilot/records"
+  },
+  {
+    "field": "explorer.env_vars.OPD_RUN_STATUS",
+    "before": null,
+    "after": "/scratch/prjsnnn0000269/Students/shuming/storage_ext/cjk/outputs/tcod-opd/alfworld-s17-pilot/pilot/training-status.json"
+  },
+  {
+    "field": "explorer.env_vars.OPD_STOP_FILE",
+    "before": null,
+    "after": "/scratch/prjsnnn0000269/Students/shuming/storage_ext/cjk/outputs/tcod-opd/alfworld-s17-pilot/pilot/STOP_REQUESTED"
+  },
+  {
+    "field": "explorer.env_vars.RAY_TMPDIR",
+    "before": "/dev/shm/ray_tmp",
+    "after": "/scratch/prjsnnn0000269/Students/shuming/cjk/tmp/alfworld-s17-pilot/ray"
+  },
+  {
+    "field": "explorer.env_vars.TMPDIR",
+    "before": "/dev/shm/tmp",
+    "after": "/scratch/prjsnnn0000269/Students/shuming/cjk/tmp/alfworld-s17-pilot/workers"
+  },
+  {
+    "field": "model.model_path",
+    "before": "Qwen/Qwen2.5-3B-Instruct",
+    "after": "/scratch/prjsnnn0000269/Students/shuming/cjk/models/Qwen3-1.7B"
+  },
+  {
+    "field": "monitor.monitor_args",
+    "before": null,
+    "after": {
+      "mode": "online",
+      "logdir": "/scratch/prjsnnn0000269/Students/shuming/cjk/logs/tcod-opd/alfworld-s17-pilot/swanlab"
+    }
+  },
+  {
+    "field": "monitor.monitor_type",
+    "before": "wandb",
+    "after": "swanlab"
+  },
+  {
+    "field": "name",
+    "before": "alfworld_opd",
+    "after": "alfworld-s17-pilot"
+  },
+  {
+    "field": "project",
+    "before": "ALFWORLD_TCOD",
+    "after": "tcod-opd"
+  },
+  {
+    "field": "ray_namespace",
+    "before": null,
+    "after": "tcod-opd-alfworld-s17-pilot"
+  },
+  {
+    "field": "trainer.save_interval",
+    "before": 250,
+    "after": 0
+  },
+  {
+    "field": "trainer.save_steps",
+    "before": null,
+    "after": [
+      10,
+      25,
+      50
+    ]
+  },
+  {
+    "field": "trainer.schedule_steps",
+    "before": null,
+    "after": 100
+  },
+  {
+    "field": "trainer.total_steps",
+    "before": 250,
+    "after": 50
+  }
+]

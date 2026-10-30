@@ -1,0 +1,7 @@
+{
+  "status": "rendered_not_runtime_validated",
+  "phase": "smoke-resume",
+  "gpu_count": 8,
+  "target_steps": 4,
+  "schedule_steps": 100
+}

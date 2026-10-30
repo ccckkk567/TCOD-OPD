@@ -1,64 +1,63 @@
-# Implementation status
+# Implementation status — 2026-10-30
 
-This distinguishes local code, remote evidence and pending integration. It is not
-a declaration that the execution plan is complete. No new TCOD source behavior
-changes are authorized by the general request to continue local implementation.
+Local implementation and real experiment completion are separate. No training,
+evaluation, export or recovery success is inferred from unit tests. AGENTS.md and
+the user's explicit approvals override the reference plan.
 
-## Implemented locally
+## Implemented local path
 
-- Model download/reuse with fixed revisions and size/index checks; GPU/CPU probe
-  and source environment setup jobs. Existing remote jobs are user-operated.
-- Shared-env benchmark preparation, dependency constraints, serialized installation,
-  per-job metadata and GPU recheck. WebShop search index is still pending.
-- ALFWorld disjoint pilot split preparation from training games.
-- Independent per-worker evidence recorder, failure propagation, offline audit and
-  lossless merge. Explicitly approved opt-in hooks now observe all three benchmark
-  OPD workflows and the common actor-update call. Local call-site tests pass;
-  real distributed/GPU record generation remains unvalidated.
-- Descriptive outcome analysis with explicit unknown and technical-failure counts.
-- Fixed random development-prefix selection from actual recorded messages/tokens.
-- Data-membership and declared-turn-revision audit, explicitly limited in scope.
-- Task-level paired differences and task-cluster percentile bootstrap, including
-  raw per-task points and missing/technical-failure denominators.
-- Independent local-asset Transformers candidate generation and full-vocabulary
-  temperature-scaled conditional cross-scoring, plus a GPU job entry point. Local
-  plumbing tests pass; actual GPU numerics and TCOD-backend equivalence are pending.
-- Path-only ALFWorld configuration rendering, two committed student configurations,
-  and an entry point calling the actual TCOD loader/validator in isolated validation
-  storage. Real GPU validation and approval of pilot behavior settings are pending.
-- Rank-complete FSDP checkpoint archive structure inspection. It explicitly does
-  not claim payload integrity or successful recovery.
-- Earlier launcher error propagation and SwanLab offline/local preservation changes
-  already committed before the user's new explicit TCOD-change approval rule.
+| Plan area | Implemented entry points | Remaining evidence |
+|---|---|---|
+| Assets/environment | assets, shared-env preparation, WebShop index and official spaCy resource | Remote package locks, assets, simulator reset/step |
+| Split protocols | prepare for ALFWorld; task_protocol for declared WebShop/ScienceWorld training manifests | Runtime tasks and simulator identity |
+| P00/P04 completion/stop | Trainer propagation/stop; train driver and Slurm script; checkpoints and export | Distributed failure/stop/save, actual tensors |
+| P01/P02 recording | Approved three-workflow and actor-update hooks; records, evidence, merge_records, compact | Actual worker tensors/info, scoring positions, IO/staleness overhead |
+| P03 monitoring | Patched SwanLab with local preservation/offline behavior; approved configs | Installed SDK behavior on Orion |
+| E1 configuration | pilot_config; six s17/s04 smoke-first, smoke-resume and pilot configs | Actual loader validation and 2+2 smoke |
+| E0 evaluation | environment and evaluate; teacher-free; records feed probes | Real runs and serving-backend comparison |
+| E2 prefixes/candidates | probes for each fixed/dynamic invocation, pool with provenance, candidates exact-token generation/scoring | Runtime frozen banks and numeric checks |
+| E3 continuation | Full-response replay and exposed-state verification, both executors for 2x2 | Simulator reliability and repeated branches |
+| E4/reporting | analyze, paired_stats, branch_analysis, selection_analysis, report; CSV/JSON/PNG and cases | Actual outcomes, uncertainty and defensible conclusions |
+| Control plane | jobs DAG, separate jobs, IDs, sacct, afterok/afterany | User submissions and remote artifacts |
+| Checks | smoke scoring/recovery; production-method doubles and artifact handoff tests | Real scoring, optimizer/scheduler/RNG and asynchronous resume |
 
-## Observed remotely, not inferred from local tests
+The training driver starts its own single-node Ray instance, forwards recorder
+variables, routes logs to logs/tcod-opd, and refuses stale control files. COMPLETE
+requires target update records and final checkpoint structure. Structure is not
+proof of restoration. Failed/interrupted runs retain evidence without fake success.
 
-- Install job 180496 passed basic imports, attention math comparison and backward
-  checks on H200. This was before the subsequent benchmark dependency installations.
-- Qwen3-1.7B download job completed and READY.json was observed.
-- Other model and benchmark job completion is not established in this document.
-- No real OPD update, baseline evaluation or checkpoint recovery has been validated.
+Approved configs stop at 2, resume to 4, or run continuously to 50. Their LR horizon
+is 100; pilot saves are 10/25/50. Original 8-GPU allocation and other training and
+sampling parameters are preserved. Continuous 50-step training does not rely on
+an untested 25+25 resume strategy.
 
-## Pending work requiring a concrete integration decision or runtime evidence
+## Boundaries and conditional extensions
 
-- Validate approved record hooks with real tensor serialization, environment info,
-  Ray worker settings, trainer consumption and IO overhead on a short GPU run.
-- Preserve TCOD's existing environment/action/reward interpretation. Any proposed
-  changes to done/success, teacher scoring or abnormal-sample handling need separate
-  evidence and explicit approval. The attempted ALFWorld edit was withdrawn.
-- Validate generated configs on the installed environment; approve the intended
-  pilot step/scheduler/checkpoint/resource/monitor settings before training launch.
-- Real token-position/temperature comparison, generation/update/recovery smoke,
-  complete checkpoint/export checks and actual independent evaluations.
-- Full WebShop dependencies/index/runtime compatibility, real ALFWorld/ScienceWorld
-  reset/step checks and runtime record-schema validation. Shared venvs supersede the plan's RPC
-  isolation proposal; a new RPC architecture is not an approved requirement.
-- GPU validation of candidate generation/scoring, replay validation, 2x2 continuation
-  and update interventions. Standalone candidate code does not execute environment
-  actions or demonstrate training-backend equivalence.
-- Compact array storage, prefix deduplication, cross-student common pools, plotting,
-  case reports, automatic job DAG/reconciliation and final research audit.
+- Separate benchmark venv/RPC modules are superseded by the user's shared-env
+  decision. Diagnostic Episode uses original constructors/prompts/parsers.
+- Done/reward, overflow/dummy behavior, sample filtering, teacher slicing, loss and
+  optimizer are preserved. Plan suggestions to change these are not authorized
+  by general instructions to continue. Unknown success is never invented.
+- E5 update_probe (teacher-score interventions/control updates) and E6 follow-ups
+  are conditional on findings in the plan. They are not implemented or run here:
+  a concrete intervention requires approval before changing TCOD update behavior.
+  No success-returning stub exists.
+- No automatic resubmission, background cluster monitor or live-checkpoint export
+  is enabled. A new attempt follows inspection of failed/ambiguous registry entries.
+  Export only after checkpoint writers have stopped.
+- Reports retain missing labels and failures. NLL is not action probability.
+  Optional adoption frequencies use actual new samples and exact original-parser
+  action equality, recording overlaps. Hidden simulator state and causal learning
+  mechanisms are not certified by these tools.
 
-No missing stage is replaced by a fake score, fake READY or stub reporting success.
-The offline tools can be finished/tested locally, but completing the actual study
-still requires remote results and approved TCOD integration.
+## Observed remotely
+
+- Install job 180496 passed imports, attention math comparison and backward checks
+  on H200 before subsequent benchmark dependency installations.
+- Qwen3-1.7B completed and READY.json was observed.
+- Other current asset/job completion is not established here.
+- No real OPD update, baseline evaluation or checkpoint recovery is validated.
+
+See diagnostic-runs.md for CLI contracts and training-readiness.md for approved
+configs. Full execution-plan completion requires real Orion results; no missing
+stage is replaced by fake data or READY.

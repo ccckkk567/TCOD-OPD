@@ -64,6 +64,17 @@ class TransformersBackend:
             .eval()
         )
 
+    def encode_messages(self, messages, enable_thinking=None):
+        """Apply the tokenizer's chat template with the TCOD user-final convention."""
+        text = self.tokenizer.apply_chat_template(
+            messages,
+            tokenize=False,
+            add_generation_prompt=True,
+            chat_template=self.tokenizer.get_chat_template(),
+            enable_thinking=enable_thinking,
+        )
+        return self.tokenizer(text, add_special_tokens=False)["input_ids"]
+
     def generate(self, prefix, settings, seed):
         """Generate using actual recorded prefix IDs and a fresh explicit sampling policy."""
         from transformers import GenerationConfig

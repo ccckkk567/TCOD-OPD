@@ -62,8 +62,12 @@ Source evidence remains untouched. A failed merge leaves a readable
 `records-merged.in-progress` directory for inspection; it is not silently reused.
 The audit retains ID sets in memory, so total memory still grows with record count.
 
-Remaining P02 work: real GPU/distributed validation of the approved hooks,
-compact array storage (NPZ/Parquet) and prompt deduplication.
+Remaining P02 work: real GPU/distributed validation of the approved hooks.
+Offline compact storage is available through `python -m opd_pilot.compact pack
+SOURCE NEW_ARCHIVE`; `unpack ARCHIVE NEW_RECORDS` restores the original schema.
+It stores arrays in arrays.npz and exact repeated messages once, preserving each
+individual turn identity. Run after writers stop, on a compute node with NumPy.
+The live recorder remains JSONL; compact archives are not passed directly to readers.
 Version 1 stores arrays inline in JSONL for a small pilot, so it is not yet the
 large-run storage implementation. File and directory names contain no hashes.
 
@@ -98,3 +102,12 @@ must not be silently described as failures or omitted from coverage reporting.
 
 This implements descriptive summaries only. Paired statistics, uncertainty
 intervals, plots and mechanism claims from plan section 14 remain future work.
+## Resumed-segment references
+
+A resumed segment can consume experiences still in TCOD's original persistent
+buffer. `read_records(root, reference_roots=[prior_root])` validates these links
+against both segments but returns only the current segment's events. The approved
+2+2 driver and recovery checker supply the first segment's root automatically.
+This preserves the original buffer policy and avoids counting old updates twice.
+For standalone merging/compression/auditing, first include both segments' closed
+shards in a combined evidence tree; do not discard unresolved references.

@@ -6,9 +6,11 @@ from pathlib import Path
 from opd_pilot.records import audit
 
 
-def read_records(root):
+def read_records(root, reference_roots=()):
     """Read only completed, linked records, preserving the actual stored payloads."""
-    audit(root)
+    # A resumed segment may consume persisted experiences from an earlier segment.
+    # Validate those links too, but return only this segment's own events.
+    audit(root, reference_roots=reference_roots)
     result = {kind: [] for kind in ("episode", "turn", "update")}
     for path in sorted(Path(root).glob("*/events.jsonl")):
         with path.open(encoding="utf-8") as stream:
@@ -18,7 +20,7 @@ def read_records(root):
     return result
 
 
-def publish(output, payloads):
+def publish(output, payloads, extra_writer=None):
     """Publish a new artifact directory, retaining failed staging for inspection."""
     output = Path(output)
     if output.exists():
@@ -30,6 +32,8 @@ def publish(output, payloads):
             json.dumps(value, indent=2, ensure_ascii=False, allow_nan=False) + "\n",
             encoding="utf-8",
         )
+    if extra_writer is not None:
+        extra_writer(staging)
     if output.exists():
         raise FileExistsError(output)
     staging.rename(output)

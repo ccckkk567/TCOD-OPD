@@ -1,0 +1,8 @@
+{
+  "run_name": "alfworld-s17-pilot",
+  "student": "s17",
+  "teacher": "t08",
+  "phase": "pilot",
+  "train_tasks": "/scratch/prjsnnn0000269/Students/shuming/storage_ext/cjk/outputs/tcod-opd/protocols/alfworld/pilot-v1/train_pilot.jsonl",
+  "output": "orion/generated/alfworld-s17-pilot"
+}

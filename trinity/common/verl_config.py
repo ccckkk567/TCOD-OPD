@@ -424,7 +424,9 @@ class veRLConfig:
         # Trainer Config
         self.trainer.nnodes = config.cluster.trainer_node_num
         self.trainer.n_gpus_per_node = config.cluster.trainer_gpu_num_per_node
-        self.trainer.total_training_steps = config.trainer.total_steps or sys.maxsize
+        self.trainer.total_training_steps = (
+            config.trainer.schedule_steps or config.trainer.total_steps or sys.maxsize
+        )
         self.trainer.sync_freq = config.synchronizer.sync_interval
         self.trainer.save_freq = config.trainer.save_interval
         self.trainer.project_name = config.project

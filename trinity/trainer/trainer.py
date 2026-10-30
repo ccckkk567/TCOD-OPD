@@ -13,6 +13,7 @@ from typing import Dict, List, Tuple
 import pandas as pd
 import ray
 
+from opd_pilot.lifecycle import TrainingIncomplete, record_completion, stop_requested
 from trinity.algorithm import SAMPLE_STRATEGY
 from trinity.algorithm.sample_strategy.sample_strategy import SampleStrategy
 from trinity.common.config import Config
@@ -70,23 +71,41 @@ class Trainer:
         self.last_sync_step = self.train_step_num
         await self.synchronizer.set_trainer_status.remote(RunningStatus.RUNNING)
 
-    async def train(self) -> str:
+    async def train(self) -> str:  # noqa: C901
         """Train the model."""
+        failure = None
+        interrupted = False
+        completed_step = self.train_step_num
         while self.train_step_num < self.total_steps:
+            if stop_requested():
+                interrupted = True
+                break
+            sample_task = None
             try:
                 metrics = {}
                 # sample may be blocked due to explorer does not generate enough data
                 self.logger.info(f"Sample data for step {self.train_step_num + 1} started.")
                 sample_task = asyncio.create_task(self._sample_data())
                 while not sample_task.done():
+                    if stop_requested():
+                        sample_task.cancel()
+                        try:
+                            await sample_task
+                        except asyncio.CancelledError:
+                            pass
+                        interrupted = True
+                        break
                     # sync weight to make sure the explorer can continue to explore and generate enough data
                     if await self.need_sync():
                         metrics.update(await self.sync_weight())
                     await asyncio.sleep(1)
+                if interrupted:
+                    break
                 exps, sample_metrics, repr_samples = await sample_task
                 metrics.update(sample_metrics)
                 self.logger.info(f"Sample data for step {self.train_step_num + 1} finished.")
                 metrics.update(await self.train_step(exps))
+                completed_step = self.train_step_num
                 if await self.need_sync():
                     metrics.update(await self.sync_weight())
                 if self.need_save():
@@ -99,12 +118,52 @@ class Trainer:
             except StopAsyncIteration:
                 self.logger.info("No more samples to train. Stopping training.")
                 break
-            except Exception:
+            except Exception as error:
                 self.logger.error(f"Error in Trainer:\n{traceback.format_exc()}")
+                failure = error
+                if sample_task is not None and not sample_task.done():
+                    sample_task.cancel()
+                    try:
+                        await sample_task
+                    except (asyncio.CancelledError, Exception):
+                        pass  # Preserve the primary error while draining the pending task.
                 break
 
-        self.save_checkpoint(block_until_saved=True, save_as_hf=self.save_hf_checkpoint != "never")
-        await self.synchronizer.set_trainer_status.remote(RunningStatus.STOPPED)
+        checkpoint_saved = False
+        try:
+            self.save_checkpoint(
+                block_until_saved=True, save_as_hf=self.save_hf_checkpoint != "never"
+            )
+            checkpoint_saved = True
+        except Exception as error:
+            self.logger.error(f"Final checkpoint failed:\n{traceback.format_exc()}")
+            if failure is None:
+                failure = error
+        try:
+            await self.synchronizer.set_trainer_status.remote(RunningStatus.STOPPED)
+        except Exception as error:
+            if failure is None:
+                failure = error
+        incomplete = interrupted or (
+            self.total_steps != float("inf") and completed_step < self.total_steps
+        )
+        if failure is not None or incomplete:
+            # The launcher will receive an exception, so close this role's monitor here.
+            try:
+                self.monitor.close()
+            except Exception as error:
+                if failure is None:
+                    failure = error
+        status = "failed" if failure else "partial" if incomplete else "completed"
+        try:
+            record_completion(status, completed_step, self.total_steps, checkpoint_saved, failure)
+        except Exception as error:
+            if failure is None:
+                failure = error
+        if failure is not None:
+            raise failure
+        if incomplete:
+            raise TrainingIncomplete(f"Training stopped at {completed_step}/{self.total_steps}")
         self.logger.info("--------------------\n> Trainer finished.\n--------------------")
         return self.config.trainer.name
 
@@ -158,7 +217,9 @@ class Trainer:
 
     def need_save(self) -> bool:
         """Whether to save the checkpoint."""
-        return self.save_interval > 0 and self.train_step_num % self.save_interval == 0
+        return self.train_step_num in self.config.trainer.save_steps or (
+            self.save_interval > 0 and self.train_step_num % self.save_interval == 0
+        )
 
     async def sync_weight(self) -> Dict:
         """Sync the model weight."""

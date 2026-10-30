@@ -1,6 +1,7 @@
 """Generate or cross-score immutable diagnostic response banks from fixed prefixes."""
 
 import argparse
+import importlib
 import json
 import math
 from pathlib import Path
@@ -21,6 +22,12 @@ def validate(spec):
         raise ValueError("operation must be generate or score")
     manifest = model_manifest(spec["model_path"])
     source = model_manifest(spec["prefix_tokenizer_path"])
+    source_revisions = {source["revision"]}
+    for path in spec.get("additional_prefix_tokenizer_paths", []):
+        extra = model_manifest(path)
+        if token_identity(path) != token_identity(spec["prefix_tokenizer_path"]):
+            raise ValueError("Common pool source tokenizers use different token-ID mappings")
+        source_revisions.add(extra["revision"])
     if token_identity(spec["model_path"]) != token_identity(spec["prefix_tokenizer_path"]):
         raise ValueError("Different token-ID mappings; cross-tokenizer scoring is unsupported")
     if not math.isfinite(spec["temperature"]) or spec["temperature"] <= 0:
@@ -40,7 +47,9 @@ def validate(spec):
             raise ValueError("Positive integer sample count and token budget required")
         if spec["owner"] not in ("student", "teacher"):
             raise ValueError("Candidate owner must be student or teacher")
-        if any(row["sampling_student_revision"] != source["revision"] for row in bank["prefixes"]):
+        if any(
+            row["sampling_student_revision"] not in source_revisions for row in bank["prefixes"]
+        ):
             raise ValueError("Prefix tokenizer asset revision differs from recorded student")
     elif bank["token_identity"] != token_identity(spec["model_path"]):
         raise ValueError("Candidate bank token identity does not match scoring model")
@@ -50,6 +59,13 @@ def validate(spec):
 def generate(spec, manifest, bank, backend):
     """Retain all samples, including duplicate responses and generation truncations."""
     rows = []
+    parser = None
+    if spec.get("benchmark"):
+        if spec["benchmark"] not in ("alfworld", "webshop", "scienceworld"):
+            raise ValueError("Unknown benchmark parser")
+        parser = importlib.import_module(
+            f"trinity.common.workflows.envs.TCOD.{spec['benchmark']}.utils"
+        ).parse_action
     for prefix in bank["prefixes"]:
         for index in range(spec["samples_per_prefix"]):
             seed = sample_seed(spec["seed"], prefix["prefix_uid"], spec["owner"], index)
@@ -66,10 +82,13 @@ def generate(spec, manifest, bank, backend):
                     "messages": prefix["messages"],
                     "prefix_tokens": prefix["prefix_tokens"],
                     "owner": spec["owner"],
+                    "records_root": prefix.get("records_root"),
                     "generation_revision": manifest["revision"],
                     "seed": seed,
                 }
             )
+            if parser is not None:
+                rows[-1]["parsed_action"] = parser(result["response_text"])
     return {
         "schema_version": 1,
         "candidates": rows,
@@ -122,6 +141,7 @@ def main():
         Path(spec["input_bank"]).parent,
         spec["model_path"],
         spec["prefix_tokenizer_path"],
+        *spec.get("additional_prefix_tokenizer_paths", []),
     )
     manifest, bank = validate(spec)
     if args.validate_only:

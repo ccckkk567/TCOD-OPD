@@ -732,6 +732,8 @@ class TrainerConfig:
     trainer_type: str = "verl"
     trainer_strategy: str = "fsdp"  # "fsdp", "fsdp2" or "megatron"
     save_interval: int = 0
+    save_steps: List[int] = field(default_factory=list)
+    schedule_steps: Optional[int] = None  # Optional LR horizon independent of stopping step
     enable_preview: bool = True  # enable rollout preview in wandb
     total_steps: Optional[
         int

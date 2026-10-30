@@ -1,0 +1,97 @@
+project: tcod-opd
+name: alfworld-s04-smoke
+checkpoint_root_dir: /scratch/prjsnnn0000269/Students/shuming/storage_ext/cjk/checkpoints
+continue_from_checkpoint: true
+algorithm:
+  sample_strategy: staleness_control
+  sample_strategy_args:
+    max_staleness: 2
+  algorithm_type: on_policy_distill
+  advantage_fn: multi_turn_opd
+  repeat_times: 1
+  advantage_fn_args:
+    kl_coef: 1.0
+  optimizer:
+    lr: 1e-6
+model:
+  model_path: /scratch/prjsnnn0000269/Students/shuming/cjk/models/Qwen3-4B
+  max_prompt_tokens: 10240
+  max_response_tokens: 512
+cluster:
+  node_num: 1
+  gpu_per_node: 8
+buffer:
+  total_steps: 4
+  batch_size: 16
+  train_batch_size: 64
+  explorer_input:
+    taskset:
+      name: alfworld
+      storage_type: file
+      path: /scratch/prjsnnn0000269/Students/shuming/storage_ext/cjk/outputs/tcod-opd/protocols/alfworld/pilot-v1/train_pilot.jsonl
+      split: train
+      format:
+        prompt_key: game_file
+      rollout_args:
+        temperature: 1.0
+        logprobs: 0
+      workflow_args:
+        max_env_steps: 30
+    default_workflow_type: OPD_alfworld_workflow
+  trainer_input:
+    experience_buffer:
+      name: alfworld_opd_buffer
+      storage_type: queue
+      path: sqlite:////scratch/prjsnnn0000269/Students/shuming/storage_ext/cjk/outputs/tcod-opd/alfworld-s04-smoke/experience.db
+explorer:
+  eval_interval: 5
+  runner_per_model: 8
+  max_timeout: 3600
+  rollout_model:
+    engine_num: 2
+    tensor_parallel_size: 2
+    enable_prefix_caching: false
+    enforce_eager: true
+    dtype: bfloat16
+    seed: 42
+    gpu_memory_utilization: 0.7
+    enable_chunked_prefill: true
+  auxiliary_models:
+  - model_path: /scratch/prjsnnn0000269/Students/shuming/cjk/models/Qwen3-8B
+    engine_num: 1
+    tensor_parallel_size: 2
+    enable_prefix_caching: false
+    enforce_eager: true
+    dtype: bfloat16
+    seed: 42
+    max_model_len: 20480
+    max_prompt_tokens: 16384
+    max_response_tokens: 512
+  env_vars:
+    TMPDIR: /scratch/prjsnnn0000269/Students/shuming/cjk/tmp/alfworld-s04-smoke/workers
+    RAY_TMPDIR: /scratch/prjsnnn0000269/Students/shuming/cjk/tmp/alfworld-s04-smoke/ray
+    OPD_RECORD_ROOT: /scratch/prjsnnn0000269/Students/shuming/storage_ext/cjk/outputs/tcod-opd/alfworld-s04-smoke/smoke-resume/records
+    OPD_STOP_FILE: /scratch/prjsnnn0000269/Students/shuming/storage_ext/cjk/outputs/tcod-opd/alfworld-s04-smoke/smoke-resume/STOP_REQUESTED
+    OPD_RUN_STATUS: /scratch/prjsnnn0000269/Students/shuming/storage_ext/cjk/outputs/tcod-opd/alfworld-s04-smoke/smoke-resume/training-status.json
+synchronizer:
+  sync_method: nccl
+  sync_style: dynamic_by_explorer
+  sync_interval: 1
+  sync_timeout: 3600
+trainer:
+  total_steps: 4
+  save_interval: 0
+  grad_clip: 1.0
+  use_dynamic_bsz: true
+  max_token_len_per_gpu: 16384
+  ulysses_sequence_parallel_size: 2
+  schedule_steps: 100
+  save_steps:
+  - 2
+  - 4
+monitor:
+  monitor_type: swanlab
+  monitor_args:
+    mode: online
+    logdir: /scratch/prjsnnn0000269/Students/shuming/cjk/logs/tcod-opd/alfworld-s04-smoke/swanlab
+ray_namespace: tcod-opd-alfworld-s04-smoke

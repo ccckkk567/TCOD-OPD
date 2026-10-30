@@ -18,3 +18,7 @@
 - Explicit approval on 2026-10-30: add opt-in observation hooks to ALFWorld, WebShop and ScienceWorld OPD workflows and the shared veRL actor-update boundary. Preserve original prompts, model/environment calls, reward/done interpretation, teacher slicing, filtering and training algorithm. This approval covers recording only, including visible writer failures and IO overhead; other TCOD changes still require separate approval.
 - Reference plan: `orion/docs/execution-plan.md`. This file and explicit user instructions override its SSH, rsync, directory/hash, CPU-install and venv-first recommendations.
 - Never pull into a checkout or modify an environment used by running/queued jobs. Use a readable release tag or separate checkout when necessary; preserve exact commit in metadata.
+
+- Explicit approval on 2026-10-30: Trainer exceptions must propagate after cleanup; a run-specific stop marker may stop at an update boundary using the existing checkpoint path, recording partial completion. Preserve sampling/loss/optimizer and normal update order.
+
+- Explicit approval on 2026-10-30: generate 2+2 recovery-smoke and 50-update pilot configurations, keep an LR schedule horizon of 100 steps, save at 10/25/50, use SwanLab and recording, and preserve the upstream 8-GPU topology and other training/sampling parameters. Optional TrainerConfig.schedule_steps/save_steps and their synchronization/save checks implement this decision without changing defaults.

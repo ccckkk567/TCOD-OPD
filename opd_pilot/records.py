@@ -139,7 +139,7 @@ class Recorder:
         self.close()
 
 
-def audit(root):
+def audit(root, reference_roots=()):
     """Check completed shards and cross-worker episode/turn/update references offline."""
     counts = dict.fromkeys(("episode", "turn", "update"), 0)
     identifiers = {kind: set() for kind in REQUIRED}
@@ -147,7 +147,10 @@ def audit(root):
     turn_refs = set()
     attempt_refs = set()
     completed_attempts = set()
-    shards = sorted(path for path in Path(root).iterdir() if path.is_dir())
+    roots = [Path(root).resolve(), *[Path(path).resolve() for path in reference_roots]]
+    if len(set(roots)) != len(roots):
+        raise ValueError("Duplicate evidence root")
+    shards = sorted(path for directory in roots for path in directory.iterdir() if path.is_dir())
     if not shards:
         raise ValueError("No record shards found")
     for shard in shards:

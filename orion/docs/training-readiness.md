@@ -1,66 +1,54 @@
-# Concrete configuration and checkpoint checks
+# Approved training configuration and readiness
 
-Two actual path-resolved configurations are committed under
-`orion/generated/alfworld-{s17,s04}-upstream-layout/config.yaml`. Both use the
-shared Qwen3 student assets, Qwen3-8B teacher and published train_pilot task list.
-Each sibling status.json lists every change from the original ALFWorld OPD YAML.
-They preserve its 8-GPU topology, 250 steps, save interval, learning rate, sampling
-arguments, workflow, advantage and batch sizes. They are not the proposed 50-step
-pilot and are not authorized or certified for training submission.
+The user approved 2 updates + resume 2 updates, and a continuous 50-update pilot,
+with an LR schedule horizon of 100, saves at 10/25/50, SwanLab and recording.
+Original allocation remains 4 student rollout + 2 teacher + 2 trainer GPUs.
+Other sampling, batch, optimizer, advantage and workflow settings remain upstream.
 
-The generator is `python -m opd_pilot.configs --spec <spec.json>`; `--validate-only`
-checks rendering without importing TCOD. Existing generated output directories are
-exclusive; inspect/reuse committed outputs or choose a new readable directory.
-The two specs under orion/specs document how these outputs were built.
+Six configs are committed under
+`orion/generated/alfworld-{s17,s04}-{smoke-first,smoke-resume,pilot}/config.yaml`.
+Their sibling changes.json files enumerate differences from the upstream example;
+rendering specs are in orion/specs. Older upstream-layout configs retain 250 steps
+as references; do not use those for this pilot.
 
-Actual validation uses TCOD's `load_config`, plugin loader and
-`Config.check_and_update`, not a reimplementation of its schema:
+First and resumed smoke share checkpoint/buffer identity, with separate record
+and status directories. Pilot has a separate run identity. Resume requires the
+first segment's global_step_2; emitted update steps are checked after execution.
+Failed restoration is not called a successful smoke.
 
-```bash
-python -m opd_pilot.configs --runtime-config /absolute/path/config.yaml \
-  --output /absolute/path/new-validation-report
-```
+## Runtime entry
 
-Run this on a GPU compute node using envs/tcod-opd. The provided
-orion/slurm/validate_config.sbatch accepts those two positional paths; create
-logs/tcod-opd/config before submitting from the correct checkout. One GPU is
-requested for validation/imports, not for running the declared eight-GPU topology.
-The validator is permitted to load tokenizers and create metadata directories but
-does not start training. It runs offline and may fail until assets/dependencies
-exist. The check is implemented but has not been run on Orion.
+On allocated GPUs, `python -m opd_pilot.train --config /absolute/config.yaml`
+starts a dedicated Ray instance and invokes TCOD's actual loader, validator and
+run_stage. It forwards recording/control variables to workers. `--validate-only`
+uses separate validation checkpoint storage and does not train. This path requires
+the declared eight visible GPUs; one GPU does not validate this topology.
 
-TCOD's original validator automatically chooses checkpoint/log paths and may
-rename existing experiments. To avoid touching real experiment state during this
-check, its checkpoint root is temporarily redirected into the validation report.
-The resulting validated-preview.yaml is diagnostic only, not a launch config.
-Original generated config.yaml keeps the intended storage_ext checkpoint path.
-Real training logs still need a reviewed launcher arrangement to route TCOD's
-derived log directory into logs/tcod-opd while preserving its original behavior.
+`orion/slurm/train.sbatch CONFIG FULL_CODE_REVISION` supplies modules, shared venv,
+runtime credentials and offline model access. Default request is four hours,
+adjustable at submission within 18 hours. The shell handles pre-timeout USR1 by
+writing STOP_REQUESTED; saving occurs at the Trainer boundary. Early stop exits
+nonzero with partial status. A partial optimizer update is not a certified restart
+point even when saving returned.
 
-## Pending concrete decisions before pilot launch
+Logs go to logs/tcod-opd: Slurm per-job logs, Ray session copies, TCOD log symlink
+and SwanLab role logs. Checkpoints/evidence stay under storage_ext/cjk. Control
+files/output paths are exclusive. Inspect previous results before retries; do not
+delete evidence to make a job start.
 
-- The plan proposes 50 updates and intermediate checkpoints; the original example
-  uses 250 steps and saves at 250. Changing these and the scheduler requires an
-  explicit decision and actual loader validation, not an unnoticed edit.
-- Original GPU arithmetic is 4 student rollout GPUs, 2 teacher GPUs, 2 trainer GPUs.
-  A smaller Orion layout needs explicit resource choices and a real memory smoke.
-- Recording hooks for all three OPD workflows and the common actor-update call
-  are approved and implemented, disabled by default. Enable them consistently in
-  trainer and explorer workers and validate on GPU before pilot use; see recording.md.
-- These templates retain upstream monitor selection; SwanLab and log routing must
-  be made explicit in the eventual approved run configuration.
-- No evaluation/recovery success is inferred from this validation or from unit tests.
+COMPLETE.json requires expected contiguous successful actor updates, completed
+status, linked closed records and all final FSDP rank archives. It does not prove
+tensor integrity or optimizer/RNG restoration.
 
-## Checkpoint structure inspection
+## Remaining runtime gates
 
-`python -m opd_pilot.checkpoints --spec <spec.json>` takes checkpoint, world_size
-and output fields. `--validate-only` inspects without publishing a report. Supply
-the step directory containing actor/, after writers have stopped. It checks each
-model/optim/extra_state_world_size_N_rank_R.pt file using the naming convention in
-the current TCOD FSDP checkpoint manager. Missing/truncated archives and unexpected
-ranks/world sizes return an incomplete result and nonzero exit code.
+1. Finish existing asset/environment jobs without editing their checkout or venv.
+2. Validate approved configs on the installed environment and eight-GPU allocation.
+3. Run simulator/model evaluation and real scoring comparison.
+4. Run smoke-first then smoke-resume; inspect recovery report, LR, teacher identity,
+   updates and asynchronous buffer freshness.
+5. With usable assets/pairing, submit two continuous pilot chains independently
+   within account capacity. Smaller GPU layouts require a separate decision.
 
-The inspector never unpickles tensors. Complete ZIP structure does not prove tensor
-contents, optimizer compatibility, scheduler/RNG restoration, buffer cursor recovery
-or the next optimizer update. Those remain real recovery-smoke requirements. This
-tool does not export a checkpoint or emit a training/model READY marker.
+These gates are not observed successes. Local implementation submitted no HPC jobs;
+the jobs helper never connects remotely.

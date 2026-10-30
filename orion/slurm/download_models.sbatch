@@ -21,6 +21,7 @@ source "$ENV_ROOT/tcod-opd/bin/activate"
 test -f "$ENV_ROOT/tcod-opd/ENV_INSTALLED.json"
 source "$CREDENTIALS_FILE"
 export HF_HOME="$ORION_ROOT/downloads/huggingface-cache"
+export HF_HUB_DISABLE_XET="${HF_HUB_DISABLE_XET:-1}"
 export HF_HUB_ETAG_TIMEOUT=30 HF_HUB_DOWNLOAD_TIMEOUT=60
 keys=(s17 s04 t08 t30)
 python -m opd_pilot.assets --key "${keys[$SLURM_ARRAY_TASK_ID]}" --models-root "$MODEL_ROOT"

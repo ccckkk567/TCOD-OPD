@@ -62,3 +62,35 @@ Remaining P02 work: approved integration at actual model/trainer call sites,
 compact array storage (NPZ/Parquet) and prompt deduplication.
 Version 1 stores arrays inline in JSONL for a small pilot, so it is not yet the
 large-run storage implementation. File and directory names contain no hashes.
+
+## Offline outcome analysis
+
+`python -m opd_pilot.analyze --spec /path/to/analysis.json` reads closed shards
+and publishes `summary.json`, `report.md` and `status.json` in a separate directory.
+`--validate-only` checks the specification and evidence without writing output.
+Run on a compute node after all record producers have stopped. No simulator,
+model imports or TCOD execution is involved.
+
+The JSON specification requires six nonempty strings: `records_root`, `output`,
+`environment`, `split`, `model_revision` and `protocol`. Use one environment,
+split, model and protocol per report; those labels are caller-supplied context,
+not a substitute for validating provenance at the future integration point.
+Existing outputs are never overwritten. A failed write may leave an
+`<output>.in-progress` directory for inspection.
+
+The episode `outcome` object may supply `task_success` and `technical_failure`
+as true/false/null, `termination_reason` as a string/null, and finite numeric
+`score_final`, `score_best`, `raw_score` values (or null). Missing values remain
+unknown; neither done nor reward determines success. No final/best score fallback
+or benchmark-specific normalization is performed. TCOD integration and mapping
+of actual environment fields to this evidence schema remain pending approval.
+
+Reports contain known success/failure/unknown counts, known-label success rate,
+label coverage, a separate task-equal known-label success rate, explicit technical
+failure counts, termination reasons and independent score denominators. Technical
+failures remain in the report. Recorded turn counts are not claimed to be verified
+simulator step counts. Scores describe available labels only; unknown outcomes
+must not be silently described as failures or omitted from coverage reporting.
+
+This implements descriptive summaries only. Paired statistics, uncertainty
+intervals, plots and mechanism claims from plan section 14 remain future work.

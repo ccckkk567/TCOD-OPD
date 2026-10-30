@@ -105,3 +105,10 @@ checkpoints/
 *.db-shm
 *.db-wal
 my_examples/**/*.db
+
+# Orion runtime assets and credentials never belong in Git.
+*-credentials.env
+*.local.env
+*.sif
+*.safetensors
+orion/runtime/

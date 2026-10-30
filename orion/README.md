@@ -40,3 +40,11 @@ README requests Python 3.10 and editable `.[dev]` plus FlashAttention 2.8.1. Ori
 FlashAttention 2.8.1 has no official Python 3.11/Torch 2.8 wheel in its release assets, so the job builds from source using the available CUDA 12.6 compiler. That compiler/runtime minor difference is explicit and requires GPU validation; if compilation or kernels fail, inspect the log and align the toolkit, rather than silently upgrading packages. No driver is installed or changed. Logs and resolved dependencies are saved under `logs/tcod-opd/env/<job-id>/`. No credential is required for this installation.
 
 Do not pull changes into this editable checkout while installation or training uses it. A successful install writes `ENV_INSTALLED.json`; this is only a basic environment check, not a model-training READY marker. Incomplete installations may be retried after inspecting the failure; published environments are not modified by the installer.
+
+## Local preparation while the install job is queued
+
+Launcher exceptions now propagate to the CLI. Completed Ray refs are retrieved to surface worker errors; a trainer that fails to finish after the explorer exits is a timeout, not success. Trainer-first completion retains the existing short explorer grace period. Shutdown failures also propagate. Eight dependency-free tests exercise production function bodies with fake Ray, including process exit status; they do not replace a real distributed run or checkpoint-completeness check.
+
+The inherited pre-commit workflow previously checked all upstream files, including existing style/type errors. It now checks cumulative changes since the pinned upstream baseline, then runs the small launcher tests and shell syntax checks. This does not certify untouched upstream files. Sphinx built successfully in the initial run but publishing failed with GitHub bot permission denied (403). This experiment branch keeps a manual document build/artifact workflow without automatic website publishing. The untouched `main` branch still carries its original workflow until these changes are merged.
+
+Do not pull these queued local changes on HPC during installation. Synchronize after the current job finishes and before starting the next stage.

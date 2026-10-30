@@ -1,4 +1,5 @@
 """Launch the trainer"""
+
 import argparse
 import asyncio
 import os
@@ -35,6 +36,7 @@ def bench(config: Config) -> None:
         ray.get(explorer.shutdown.remote())
     except Exception:
         logger.error(f"Benchmark failed:\n{traceback.format_exc()}")
+        raise
 
 
 def explore(config: Config) -> None:
@@ -47,6 +49,7 @@ def explore(config: Config) -> None:
         ray.get(explorer.shutdown.remote())
     except Exception:
         logger.error(f"Explorer failed:\n{traceback.format_exc()}")
+        raise
 
 
 def train(config: Config) -> None:
@@ -59,6 +62,7 @@ def train(config: Config) -> None:
         ray.get(trainer.shutdown.remote())
     except Exception:
         logger.error(f"Trainer failed:\n{traceback.format_exc()}")
+        raise
 
 
 def serve(config: Config) -> None:
@@ -71,6 +75,16 @@ def serve(config: Config) -> None:
         ray.get(explorer.shutdown.remote())
     except Exception:
         logger.error(f"Explorer failed:\n{traceback.format_exc()}")
+        raise
+
+
+def _wait_for_completion(refs, timeout: float, required: bool = True) -> None:
+    """Surface remote failures and reject unfinished required work."""
+    ready, pending = ray.wait(refs, timeout=timeout, num_returns=len(refs))
+    # Waiting alone does not propagate exceptions stored in Ray object refs.
+    ray.get(ready)
+    if required and pending:
+        raise TimeoutError(f"{len(pending)} required Ray task(s) did not finish within {timeout}s")
 
 
 def both(config: Config) -> None:
@@ -115,7 +129,7 @@ def both(config: Config) -> None:
                 "> Stopping the explorer process immediately.\n"
                 "==========================================================="
             )
-            ray.wait(wait_ref, timeout=5)
+            _wait_for_completion(wait_ref, timeout=5, required=False)
         elif ready == config.explorer.name:
             logger.info(
                 "===============================================================\n"
@@ -125,14 +139,16 @@ def both(config: Config) -> None:
                 "> You can force stop the `Trainer` process by pressing Ctrl+C.\n"
                 "==============================================================="
             )
-            ray.wait(wait_ref, timeout=config.synchronizer.sync_timeout)
-        ray.wait(
+            _wait_for_completion(wait_ref, timeout=config.synchronizer.sync_timeout)
+        else:
+            raise RuntimeError(f"Unexpected worker completion result: {ready!r}")
+        _wait_for_completion(
             [explorer.shutdown.remote(), trainer.shutdown.remote()],
             timeout=config.synchronizer.sync_timeout,
-            num_returns=2,
         )
     except Exception:
         logger.error(f"Explorer or Trainer failed:\n{traceback.format_exc()}")
+        raise
 
 
 MODE_MAP = {

@@ -1,4 +1,5 @@
 """Small real GPU check; no model downloads and no claim of OPD readiness."""
+
 import importlib
 import importlib.metadata
 import json
@@ -21,8 +22,10 @@ def main():
     actual = flash_attn_func(q, k, v, dropout_p=0.0, causal=True)
     with torch.nn.attention.sdpa_kernel(torch.nn.attention.SDPBackend.MATH):
         expected = torch.nn.functional.scaled_dot_product_attention(
-            q.float().transpose(1, 2), k.float().transpose(1, 2),
-            v.float().transpose(1, 2), is_causal=True,
+            q.float().transpose(1, 2),
+            k.float().transpose(1, 2),
+            v.float().transpose(1, 2),
+            is_causal=True,
         ).transpose(1, 2)
     torch.testing.assert_close(actual.float(), expected, atol=0.03, rtol=0.03)
     actual.float().square().mean().backward()
@@ -35,9 +38,10 @@ def main():
         "gpu": torch.cuda.get_device_name(0),
         "torch_cuda_runtime": torch.version.cuda,
         "python": sys.version,
-        "versions": {name: importlib.metadata.version(name) for name in (
-            "torch", "vllm", "verl", "flash-attn", "transformers", "ray", "swanlab"
-        )},
+        "versions": {
+            name: importlib.metadata.version(name)
+            for name in ("torch", "vllm", "verl", "flash-attn", "transformers", "ray", "swanlab")
+        },
         "checks": ["imports", "flash_attention_vs_math", "attention_backward"],
         "pending": ["model_generation", "teacher_token_scoring", "opd_update", "recovery"],
     }

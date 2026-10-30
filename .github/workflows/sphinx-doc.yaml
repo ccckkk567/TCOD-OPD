@@ -1,13 +1,10 @@
-name: Deploy Sphinx Doc to Pages
+name: Build Sphinx documentation (manual)
 
 on:
-  pull_request:
-    types: [opened, synchronize]
-    paths:
-      - 'docs/sphinx_doc/**/*'
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   pages:
@@ -82,8 +79,3 @@ jobs:
       with:
         name: SphinxDoc
         path: 'docs/sphinx_doc/build'
-    - uses: peaceiris/actions-gh-pages@v3
-      if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: 'docs/sphinx_doc/build/html'

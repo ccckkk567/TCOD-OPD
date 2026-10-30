@@ -37,3 +37,13 @@ GPU 0/1是角色示意，实际编号由Ray分配，并非硬编码设备编号�
 run_name为alfworld-s17-two-gpu-smoke，与之前8卡配置产物隔离。
 正式baseline可与本链同时排队。未通过实际初始化/更新/保存/恢复之前不得
 宣称两卡训练已验证；恢复到4步的COMPLETE也不等于逐位恢复等价。
+
+用户随后要求将真实实验一并排队，已新增 `submit_alfworld_pilot.sh REVISION RESUME_JOB`。
+已提交的工程链为182355→182356；只追加一个50-update pilot，以afterok依赖恢复job。
+进入训练前在计算节点核对两段COMPLETE、真实job身份、有效两卡布局及原恢复检查器
+对消费记录/optimizer/scheduler状态的验证。检查失败直接退出，不启动pilot。
+报告仍明确：这不是逐位恢复证明，也不证明原生评分与独立后端完全等价。
+Pilot使用独立run_name `alfworld-s17-two-gpu-pilot`，从原始1.7B学生开始，
+教师8B、LR日程100、保存10/25/50、SwanLab和记录器；2GPU、16CPU、128G、
+18h上限。18h是首次50步实验的上限，不是实测耗时；超时前沿用原安全停止机制，
+不自动假定完成、不无限自动重提。E0可独立并行；E5/E6仍不自动执行。

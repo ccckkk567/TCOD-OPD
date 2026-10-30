@@ -30,6 +30,11 @@ export ALFWORLD_DATA="$DATA_ROOT/alfworld"
 export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
 export TMPDIR="/tmp/opd-work-$SLURM_JOB_ID"
 mkdir -p "$TMPDIR"
+if [[ -n "${3:-}" ]]; then
+    python -m orion.scripts.pilot_recovery_gate \
+      --run "$OUTPUT_ROOT/alfworld-s17-two-gpu-smoke" --job "$3" \
+      --report "$REPORT_ROOT/alfworld-s17-two-gpu-pilot/recovery-gate-$SLURM_JOB_ID.json"
+fi
 stop_file=$(python - "$config" <<'PY'
 import sys, yaml
 from pathlib import Path

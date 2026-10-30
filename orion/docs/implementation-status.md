@@ -21,6 +21,11 @@ changes are authorized by the general request to continue local implementation.
 - Independent local-asset Transformers candidate generation and full-vocabulary
   temperature-scaled conditional cross-scoring, plus a GPU job entry point. Local
   plumbing tests pass; actual GPU numerics and TCOD-backend equivalence are pending.
+- Path-only ALFWorld configuration rendering, two committed student configurations,
+  and an entry point calling the actual TCOD loader/validator in isolated validation
+  storage. Real GPU validation and approval of pilot behavior settings are pending.
+- Rank-complete FSDP checkpoint archive structure inspection. It explicitly does
+  not claim payload integrity or successful recovery.
 - Earlier launcher error propagation and SwanLab offline/local preservation changes
   already committed before the user's new explicit TCOD-change approval rule.
 
@@ -39,8 +44,8 @@ changes are authorized by the general request to continue local implementation.
 - Preserve TCOD's existing environment/action/reward interpretation. Any proposed
   changes to done/success, teacher scoring or abnormal-sample handling need separate
   evidence and explicit approval. The attempted ALFWorld edit was withdrawn.
-- Executable configs: use the real locked TCOD loader and verify on the installed
-  environment; do not guess schema fields or silently change upstream algorithms.
+- Validate generated configs on the installed environment; approve the intended
+  pilot step/scheduler/checkpoint/resource/monitor settings before training launch.
 - Real token-position/temperature comparison, generation/update/recovery smoke,
   complete checkpoint/export checks and actual independent evaluations.
 - Full WebShop dependencies/index/runtime compatibility, real ALFWorld/ScienceWorld

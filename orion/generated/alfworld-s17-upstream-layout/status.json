@@ -1,0 +1,71 @@
+{
+  "status": "rendered_not_runtime_validated",
+  "source_revision": "96bbd8e827699547d5b4129446f37b5836687e68",
+  "template": "TCOD_examples/alfworld/opd.yaml",
+  "spec": {
+    "run_name": "alfworld-s17-upstream-layout",
+    "student": "s17",
+    "teacher": "t08",
+    "train_tasks": "/scratch/prjsnnn0000269/Students/shuming/storage_ext/cjk/outputs/tcod-opd/protocols/alfworld/pilot-v1/train_pilot.jsonl",
+    "output": "orion/generated/alfworld-s17-upstream-layout"
+  },
+  "changes": [
+    {
+      "field": "buffer.explorer_input.taskset.path",
+      "before": "/path/to/alfworld_data/train_expert.jsonl",
+      "after": "/scratch/prjsnnn0000269/Students/shuming/storage_ext/cjk/outputs/tcod-opd/protocols/alfworld/pilot-v1/train_pilot.jsonl"
+    },
+    {
+      "field": "buffer.trainer_input.experience_buffer.path",
+      "before": "sqlite:///alfworld_opd_buffer.db",
+      "after": "sqlite:////scratch/prjsnnn0000269/Students/shuming/storage_ext/cjk/outputs/tcod-opd/alfworld-s17-upstream-layout/experience.db"
+    },
+    {
+      "field": "checkpoint_root_dir",
+      "before": "./checkpoints",
+      "after": "/scratch/prjsnnn0000269/Students/shuming/storage_ext/cjk/checkpoints"
+    },
+    {
+      "field": "explorer.auxiliary_models.0.model_path",
+      "before": "/path/to/teacher",
+      "after": "/scratch/prjsnnn0000269/Students/shuming/cjk/models/Qwen3-8B"
+    },
+    {
+      "field": "explorer.env_vars.RAY_TMPDIR",
+      "before": "/dev/shm/ray_tmp",
+      "after": "/scratch/prjsnnn0000269/Students/shuming/cjk/tmp/alfworld-s17-upstream-layout/ray"
+    },
+    {
+      "field": "explorer.env_vars.TMPDIR",
+      "before": "/dev/shm/tmp",
+      "after": "/scratch/prjsnnn0000269/Students/shuming/cjk/tmp/alfworld-s17-upstream-layout/workers"
+    },
+    {
+      "field": "model.model_path",
+      "before": "Qwen/Qwen2.5-3B-Instruct",
+      "after": "/scratch/prjsnnn0000269/Students/shuming/cjk/models/Qwen3-1.7B"
+    },
+    {
+      "field": "name",
+      "before": "alfworld_opd",
+      "after": "alfworld-s17-upstream-layout"
+    },
+    {
+      "field": "project",
+      "before": "ALFWORLD_TCOD",
+      "after": "tcod-opd"
+    },
+    {
+      "field": "ray_namespace",
+      "before": null,
+      "after": "tcod-opd-alfworld-s17-upstream-layout"
+    }
+  ],
+  "gpu_count": 8,
+  "buffer_steps": 250,
+  "trainer_steps": 250,
+  "notes": [
+    "Original algorithm, sampling, reward, batch sizes and steps preserved.",
+    "This is not yet the proposed 50-step pilot or authorization to train."
+  ]
+}

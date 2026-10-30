@@ -1,0 +1,7 @@
+{
+  "run_name": "alfworld-s17-upstream-layout",
+  "student": "s17",
+  "teacher": "t08",
+  "train_tasks": "/scratch/prjsnnn0000269/Students/shuming/storage_ext/cjk/outputs/tcod-opd/protocols/alfworld/pilot-v1/train_pilot.jsonl",
+  "output": "orion/generated/alfworld-s17-upstream-layout"
+}

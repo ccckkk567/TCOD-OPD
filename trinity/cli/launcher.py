@@ -20,6 +20,7 @@ from trinity.manager.state_manager import StateManager
 from trinity.trainer.trainer import Trainer
 from trinity.utils.dlc_utils import is_running, setup_ray_cluster, stop_ray_cluster
 from trinity.utils.log import get_logger
+from trinity.utils.monitor_helpers import redact_secrets
 from trinity.utils.plugin_loader import load_plugins
 
 logger = get_logger(__name__)
@@ -167,7 +168,7 @@ def run_stage(config: Config) -> None:
         namespace=config.ray_namespace,
         runtime_env={"env_vars": config.get_envs()},
     )
-    pprint(config)
+    pprint(redact_secrets(config.flatten()))
     try:
         check_and_run_task_pipeline(config)
         MODE_MAP[config.mode](config)

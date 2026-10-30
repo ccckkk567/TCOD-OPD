@@ -19,7 +19,7 @@ jobs:
       with:
         # Audit our cumulative changes, without reformatting the inherited research code.
         extra_args: --from-ref 465eef4406ad0cff675b36bd46f37f28b1736ff9 --to-ref HEAD --show-diff-on-failure
-    - name: Launcher failure regression tests (no GPU dependencies)
+    - name: Pilot correctness checks (no GPU dependencies)
       run: python -m unittest discover -s tests/orion -p 'test_*.py' -v
     - name: Shell syntax
       run: |

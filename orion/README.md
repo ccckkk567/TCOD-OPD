@@ -48,3 +48,28 @@ Launcher exceptions now propagate to the CLI. Completed Ray refs are retrieved t
 The inherited pre-commit workflow previously checked all upstream files, including existing style/type errors. It now checks cumulative changes since the pinned upstream baseline, then runs the small launcher tests and shell syntax checks. This does not certify untouched upstream files. Sphinx built successfully in the initial run but publishing failed with GitHub bot permission denied (403). This experiment branch keeps a manual document build/artifact workflow without automatic website publishing. The untouched `main` branch still carries its original workflow until these changes are merged.
 
 Do not pull these queued local changes on HPC during installation. Synchronize after the current job finishes and before starting the next stage.
+
+## Prepared follow-up work (not yet executed on HPC)
+
+- `opd_pilot.assets`: four Qwen candidates, shared readable model paths, per-model download lock, immutable revision recorded in `asset.json`, interrupted-download resume, and size/index/tokenizer checks before `READY.json`. Existing verified assets are reused offline. Unmanaged pre-existing directories are left untouched until their provenance is confirmed. File-size checks are not a full cryptographic integrity audit.
+- `orion/slurm/download_models.sbatch`: CPU array with at most two downloads from this array at once, runtime credentials from the existing file, shared HF cache, logs under `logs/tcod-opd/models/`. Depends on the installed environment; not submitted yet. Do not submit a second copy while this array is active.
+- `opd_pilot.prepare`: derive ALFWorld train/dev/confirmation/smoke lists from actual unfiltered training games, proportional by task category, deterministic seed 42, no official test access, no teacher-success filtering, and no repeated tasks to fill a small pool. Generated lists go under `storage_ext/cjk/outputs/tcod-opd/protocols/alfworld/pilot-v1`; raw games stay in `data/alfworld`. Simulator and full behavior protocol validation remain pending.
+- SwanLab: default offline until real SDK/network validation; offline/local/disabled never log in, online login does not save keys, failed uploads leave flushed local JSONL, and each monitor owns a file. Uses run-instance logging and idempotent close; config/runtime keys are redacted. Real online initialization timeouts, SDK resume semantics, single-writer aggregation, and offline synchronization remain to validate against the installed SDK. This is not the whole P03 acceptance gate.
+
+After the current installation is finished, synchronize the branch before running these future commands:
+
+```bash
+# Login node: submit only; do not run model downloads directly here.
+mkdir -p /scratch/prjsnnn0000269/Students/shuming/cjk/logs/tcod-opd/models
+sbatch orion/slurm/download_models.sbatch
+```
+
+Once ALFWorld is downloaded and verified, the following belongs inside an ioqueue allocation with the venv active:
+
+```bash
+python -m opd_pilot.prepare \
+  --data-root /scratch/prjsnnn0000269/Students/shuming/cjk/data/alfworld \
+  --output /scratch/prjsnnn0000269/Students/shuming/storage_ext/cjk/outputs/tcod-opd/protocols/alfworld/pilot-v1
+```
+
+No models or datasets have been downloaded by these local changes. Mock asset/monitor tests and small synthetic split fixtures test failure/reuse/isolation behavior only, not model quality or real simulator compatibility.

@@ -1,7 +1,9 @@
 """Monitor"""
 
+import json
 import os
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 import numpy as np
@@ -26,6 +28,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from trinity.common.config import Config
 from trinity.utils.log import get_logger
+from trinity.utils.monitor_helpers import redact_secrets
 from trinity.utils.registry import Registry
 
 MONITOR = Registry(
@@ -273,10 +276,9 @@ class SwanlabMonitor(Monitor):
     This monitor integrates with SwanLab (https://swanlab.cn/) to track experiments.
 
     Supported monitor_args in config.monitor.monitor_args:
-                - api_key (Optional[str]): API key for swanlab.login(). If omitted, will read from env
-                    (SWANLAB_API_KEY, SWANLAB_APIKEY, SWANLAB_KEY, SWANLAB_TOKEN) or assume prior CLI login.
+        Credentials are read only from SWANLAB_API_KEY at runtime, never from config.
         - workspace (Optional[str]): Organization/username workspace.
-        - mode (Optional[str]): "cloud" | "local" | "offline" | "disabled".
+        - mode (Optional[str]): "online" | "cloud" | "local" | "offline" | "disabled".
         - logdir (Optional[str]): Local log directory when in local/offline modes.
         - experiment_name (Optional[str]): Explicit experiment name. Defaults to "{name}_{role}".
         - description (Optional[str]): Experiment description.
@@ -299,21 +301,26 @@ class SwanlabMonitor(Monitor):
             else {}
         )
 
-        # Optional API login via code if provided; otherwise try environment, then rely on prior `swanlab login`.
+        self.console_logger = get_logger(__name__, in_ray_actor=True)
+        self.logger = None
+        self._closed = False
+        mode = monitor_args.get("mode") or os.environ.get("PILOT_SWANLAB_MODE", "offline")
+        mode = "online" if mode == "cloud" else mode
+        if mode not in ("online", "offline", "local", "disabled"):
+            raise ValueError(f"Unsupported SwanLab mode: {mode}")
         api_key = os.environ.get("SWANLAB_API_KEY")
-        if api_key:
+        if mode == "online" and not api_key:
+            self.console_logger.warning("SwanLab key missing; recording offline.")
+            mode = "offline"
+        if mode == "online":
             try:
-                swanlab.login(api_key=api_key, save=True)
+                swanlab.login(api_key=api_key, save=False)
             except Exception:
-                # Best-effort login; continue to init which may still work if already logged in
-                pass
-        else:
-            raise RuntimeError("Swanlab API key not found in environment variable SWANLAB_API_KEY.")
+                self.console_logger.warning("SwanLab login failed; recording offline.")
+                mode = "offline"
 
         # Compose tags (ensure list and include role/group markers)
-        tags = monitor_args.get("tags") or []
-        if isinstance(tags, tuple):
-            tags = list(tags)
+        tags = list(monitor_args.get("tags") or [])
         if role and role not in tags:
             tags.append(role)
         if group and group not in tags:
@@ -322,6 +329,23 @@ class SwanlabMonitor(Monitor):
         # Determine experiment name
         exp_name = monitor_args.get("experiment_name") or f"{name}_{role}"
         self.exp_name = exp_name
+        base_dir = (
+            monitor_args.get("logdir")
+            or (getattr(config.monitor, "cache_dir", None) if config else None)
+            or "swanlog"
+        )
+        logdir = Path(base_dir) / role
+        logdir.mkdir(parents=True, exist_ok=True)
+        # Exclusive creation also separates repeated monitors in the same process.
+        session = 1
+        while True:
+            try:
+                self._metrics = (logdir / f"metrics-{os.getpid()}-{session}.jsonl").open(
+                    "x", encoding="utf-8"
+                )
+                break
+            except FileExistsError:
+                session += 1
 
         # Prepare init kwargs, passing only non-None values to respect library defaults
         init_kwargs = {
@@ -330,53 +354,97 @@ class SwanlabMonitor(Monitor):
             "experiment_name": exp_name,
             "description": monitor_args.get("description"),
             "tags": tags or None,
-            "logdir": monitor_args.get("logdir"),
-            "mode": monitor_args.get("mode") or "cloud",
+            "logdir": str(logdir),
+            "mode": mode,
             "settings": monitor_args.get("settings"),
             "id": monitor_args.get("id"),
-            "config": config.flatten() if config is not None else None,
+            "config": redact_secrets(config.flatten()) if config is not None else None,
             "resume": monitor_args.get("resume"),
             "reinit": monitor_args.get("reinit"),
         }
         # Strip None values to avoid overriding swanlab defaults
         init_kwargs = {k: v for k, v in init_kwargs.items() if v is not None}
 
-        self.logger = swanlab.init(**init_kwargs)
-        self.console_logger = get_logger(__name__, in_ray_actor=True)
+        try:
+            self.logger = swanlab.init(**init_kwargs)
+        except Exception:
+            if mode == "online":
+                mode = "offline"
+                init_kwargs["mode"] = mode
+                try:
+                    self.logger = swanlab.init(**init_kwargs)
+                except Exception:
+                    self.console_logger.warning("SwanLab unavailable; local JSONL remains active.")
+            else:
+                self.console_logger.warning("SwanLab unavailable; local JSONL remains active.")
+        self._write_local(
+            {
+                "event": "monitor_init",
+                "mode": mode,
+                "experiment": exp_name,
+                "role": role,
+                "sdk_active": self.logger is not None,
+            }
+        )
+
+    def _write_local(self, record):
+        self._metrics.write(
+            json.dumps(
+                redact_secrets(record),
+                default=lambda value: value.tolist() if hasattr(value, "tolist") else str(value),
+            )
+            + "\n"
+        )
+        self._metrics.flush()
 
     def log_table(self, table_name: str, experiences_table: pd.DataFrame, step: int):
-        # Convert pandas DataFrame to SwanLab ECharts Table
-        headers: List[str] = list(experiences_table.columns)
-        # Ensure rows are native Python types
-        rows: List[List[object]] = experiences_table.astype(object).values.tolist()
+        if self._closed:
+            return
+        self._write_local(
+            {
+                "event": "table",
+                "step": step,
+                "name": table_name,
+                "rows": experiences_table.to_dict(orient="records"),
+            }
+        )
+        if self.logger is None:
+            return
         try:
             tbl = swanlab.echarts.Table()
-            tbl.add(headers, rows)
-            swanlab.log({table_name: tbl}, step=step)
-        except Exception as e:
-            self.console_logger.warning(
-                f"Failed to log table '{table_name}' as echarts, falling back to CSV. Error: {e}"
+            tbl.add(
+                list(experiences_table.columns),
+                redact_secrets(experiences_table.astype(object).values.tolist()),
             )
-            # Fallback: log as CSV string if echarts table is unavailable
-            csv_str = experiences_table.to_csv(index=False)
-            swanlab.log({table_name: csv_str}, step=step)
+            self.logger.log({table_name: tbl}, step=step)
+        except Exception:
+            self.console_logger.warning("SwanLab table upload failed; local table retained.")
 
     def log(self, data: dict, step: int, commit: bool = False) -> None:
         """Log metrics."""
-        # SwanLab doesn't use commit flag; keep signature for compatibility
-        swanlab.log(data, step=step)
+        if self._closed:
+            return
+        data = redact_secrets(data)
+        self._write_local({"event": "metrics", "step": step, "data": data})
+        if self.logger is not None:
+            try:
+                self.logger.log(data, step=step)
+            except Exception:
+                self.console_logger.warning("SwanLab upload failed; local metrics retained.")
         self.console_logger.info(f"Step {step}: {data}")
 
     def close(self) -> None:
+        if getattr(self, "_closed", False):
+            return
+        self._closed = True
         try:
-            # Prefer run.finish() if available
-            if hasattr(self, "logger") and hasattr(self.logger, "finish"):
+            if getattr(self, "logger", None) is not None:
                 self.logger.finish()
-            else:
-                # Fallback to global finish
-                swanlab.finish()
-        except Exception as e:
-            self.console_logger.warning(f"Failed to close SwanlabMonitor: {e}")
+        except Exception:
+            self.console_logger.warning("SwanLab finish failed; local metrics retained.")
+        finally:
+            if hasattr(self, "_metrics"):
+                self._metrics.close()
 
     @classmethod
     def default_args(cls) -> Dict:

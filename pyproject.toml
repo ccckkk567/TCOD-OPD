@@ -109,7 +109,7 @@ flash_attn = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["trinity*"]
+include = ["trinity*", "opd_pilot*"]
 exclude = ["tests*", "docs*", "scripts*"]
 
 [tool.setuptools.package-data]

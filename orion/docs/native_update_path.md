@@ -1,9 +1,8 @@
 # E5 local native-path audit and proposed patch — 2026-10-30
 
-This is a read-only audit of the local TCOD path, not validation of Orion's installed
-veRL implementation or permission to execute E5. No original training code changes
-are included in the offline tools. User adopted the staged scope in the supplied
-E5/E6 review: offline infrastructure first, native replay proposal before approval.
+This audit is not validation of Orion's installed runtime. After the offline tools,
+the user explicitly approved the isolated native replay implementation below on
+2026-10-30. Formal A/B and E6 runs remain separate later decisions.
 
 ## Verified local path
 
@@ -32,7 +31,7 @@ E5/E6 review: offline infrastructure first, native replay proposal before approv
    uses the existing checkpoint manager. Archive structure and digests do not prove
    optimizer/scheduler/RNG restoration or asynchronous writer completion.
 
-## Proposed native replay patch — NOT implemented or approved
+## Approved native replay implementation
 
 - Add an explicit, isolated replay execution mode only after approval. Construct the
   native wrapper, restore a stopped complete checkpoint, reconstruct Experience via
@@ -59,6 +58,26 @@ E5/E6 review: offline infrastructure first, native replay proposal before approv
   restore evidence, same cached scores A/A, actual optimizer count, export/reload and
   source isolation. Numerical differences are measured, not assumed zero.
 
-This proposal needs explicit approval before implementation. Formal A/B conditions,
-history/scale changes, multi-step replay and E6 execution are separate later decisions.
-No real E1–E4 findings currently select a particular intervention.
+Implementation: native_replay.py, native_codec.py and replay_observer.py, plus opt-in
+hooks in the three native trainer/actor/worker files. Original loss/advantage and
+optimizer loops remain intact. The standalone controller restores through the native
+loader but omits online explorer weight-sync setup. It owns a private synchronizer
+for checkpoint bookkeeping; no main training buffer or explorer is started.
+
+Runtime source checked for the inherited loader and optimizer implementation:
+https://github.com/volcengine/verl/blob/v0.7.0/verl/utils/checkpoint/fsdp_checkpoint_manager.py
+https://github.com/volcengine/verl/blob/v0.7.0/verl/workers/actor/dp_actor.py
+The loader restores extra RNG/scheduler state when present; the replay hook requires
+both and compares immediately restored values. Actual optimizer execution is counted
+with a post-step hook, so a skipped call is not accepted as an executed step.
+
+The first supported execution mode is engineering-aa, using identical cached native
+teacher scores. Native rank-local batch size must equal one mini-batch, PPO epochs=1
+and SP=1; collective preflight rejects other layouts before gradient updates. This
+does not automatically adjust the pilot batch or permit multi-update blocks. The
+original scheduler remains after the complete actor call, retaining horizon 100.
+
+Required real evidence remains: production capture, native conversion/backend parity,
+GPU restoration and A/A numerical comparison, final export/reload. CPU tests execute
+the actual local actor loop with lightweight model/data adapters and a real optimizer;
+they are not distributed GPU validation. No real E1–E4 findings select an intervention.

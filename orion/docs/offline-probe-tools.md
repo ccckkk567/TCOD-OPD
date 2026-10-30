@@ -2,6 +2,8 @@
 
 `opd_pilot.update_probe` has only freeze-batch, freeze-score, align, plan and compare
 operations (`--spec FILE`). There is no train/execute mode or Slurm submission stage.
+The subsequently approved standalone native_replay module is separate; see
+native-replay-usage.md for its explicit engineering-only execution boundary.
 All JSON artifacts are new directories; filenames are readable. SHA256 digests live
 only in metadata. Source checkpoints must be stopped before inspection/hash reading;
 large checkpoint audits belong on compute nodes, not the login node.
@@ -12,7 +14,8 @@ sample_id, full tokens, prompt_length, response_mask (response-width), native_fi
 Native fields preserve the supplied JSON mapping including dtype/shape metadata
 where applicable; this is an offline envelope, NOT a validated Experience serializer.
 Do not omit native fields or use compact diagnostic records as a substitute for a
-complete native training batch. Native capture/reconstruction awaits approved replay.
+complete native training batch. The approved native_codec API now provides typed
+capture/reconstruction; actual production capture and GPU parity remain unvalidated.
 
 Score payload: batch_digest, teacher_revision, tokenizer_revision, backend,
 temperature (explicit semantics should be recorded alongside it), rows. Each row

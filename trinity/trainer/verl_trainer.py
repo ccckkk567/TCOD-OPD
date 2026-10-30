@@ -571,6 +571,9 @@ class VerlPPOTrainerWrapper(RayPPOTrainer, TrainEngineWrapper):
             ):
                 # update actor
                 with marked_timer("update_actor", timing_raw, color="red"):
+                    from opd_pilot.replay_observer import prepared_batch
+
+                    prepared_batch(batch, self.global_steps)
                     with update_trace(batch, batch_exps, self.global_steps):
                         actor_output = self._update_actor(batch)
                 actor_output_metrics = reduce_metrics(actor_output.meta_info["metrics"])

@@ -871,8 +871,20 @@ class ActorRolloutRefWorker(Worker, DistProfilerExtension):
             )  # data will to device with each micro batch on actor.update_policy
 
             # perform training
-            with Timer(name="update_policy", logger=None) as timer:
-                metrics = self.actor.update_policy(data=data)
+            from opd_pilot.replay_observer import ActorTrace, enabled
+
+            replay = ActorTrace(self.actor, data) if enabled() else None
+            scheduler_before = self.actor_lr_scheduler.last_epoch if replay else None
+            self.actor._e5_replay_trace = replay
+            try:
+                with Timer(name="update_policy", logger=None) as timer:
+                    metrics = self.actor.update_policy(data=data)
+            except BaseException as error:
+                if replay is not None:
+                    replay.finish(scheduler_before, self.actor_lr_scheduler.last_epoch, repr(error))
+                raise
+            finally:
+                self.actor._e5_replay_trace = None
             delta_time = timer.last
             global_num_tokens = data.meta_info["global_token_num"]
             estimated_flops, promised_flops = self.flops_counter.estimate_flops(
@@ -892,6 +904,8 @@ class ActorRolloutRefWorker(Worker, DistProfilerExtension):
             lr = self.actor_lr_scheduler.get_last_lr()[0]
             metrics["actor/lr"] = lr.item() if torch.is_tensor(lr) else lr
             self.actor_lr_scheduler.step()
+            if replay is not None:
+                replay.finish(scheduler_before, self.actor_lr_scheduler.last_epoch)
 
             # TODO: here, we should return all metrics
             output = DataProto(meta_info={"metrics": metrics})
@@ -1092,6 +1106,11 @@ class ActorRolloutRefWorker(Worker, DistProfilerExtension):
         self.checkpoint_manager.load_checkpoint(
             local_path=local_path, hdfs_path=hdfs_path, del_local_after_load=del_local_after_load
         )
+
+        from opd_pilot.replay_observer import enabled, restored
+
+        if enabled():
+            restored(self, local_path)
 
         if self._is_offload_param:
             offload_fsdp_model_to_cpu(self.actor_module_fsdp)

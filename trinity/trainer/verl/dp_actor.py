@@ -93,6 +93,7 @@ class DataParallelPPOActor(DPActor):
         # Split to make minibatch iterator for updating the actor
         # See PPO paper for details. https://arxiv.org/abs/1707.06347
         mini_batches = data.split(self.config.ppo_mini_batch_size)
+        replay_trace = getattr(self, "_e5_replay_trace", None)
 
         # EXPERIMENTAL: apply loss scale fix
         do_fix_actor_microbatch_loss_scale = self.config.fix_actor_microbatch_loss_scale and (
@@ -106,7 +107,7 @@ class DataParallelPPOActor(DPActor):
                     max_token_len = (
                         self.config.ppo_max_token_len_per_gpu * self.ulysses_sequence_parallel_size
                     )
-                    micro_batches, _ = prepare_dynamic_batch(
+                    micro_batches, micro_indices = prepare_dynamic_batch(
                         mini_batch, max_token_len=max_token_len
                     )
                 else:
@@ -114,6 +115,15 @@ class DataParallelPPOActor(DPActor):
                         self.config.ppo_mini_batch_size // self.config.ppo_micro_batch_size_per_gpu
                     )
                     micro_batches = mini_batch.split(self.config.ppo_micro_batch_size_per_gpu)
+
+                if replay_trace is not None:
+                    if not self.config.use_dynamic_bsz:
+                        size = self.config.ppo_micro_batch_size_per_gpu
+                        micro_indices = [
+                            list(range(i, min(i + size, len(mini_batch))))
+                            for i in range(0, len(mini_batch), size)
+                        ]
+                    replay_trace.micro_order(micro_indices)
 
                 if do_fix_actor_microbatch_loss_scale:
                     # calculate the total number of response tokens in the minibatch
@@ -218,6 +228,8 @@ class DataParallelPPOActor(DPActor):
 
                     append_to_dict(metrics, micro_batch_metrics)
 
+                if replay_trace is not None:
+                    replay_trace.attempts += 1
                 grad_norm = self._optimizer_step()
                 mini_batch_metrics = {"actor/grad_norm": grad_norm.detach().item()}
                 append_to_dict(metrics, mini_batch_metrics)

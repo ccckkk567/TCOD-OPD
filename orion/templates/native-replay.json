@@ -1,0 +1,13 @@
+{
+  "purpose": "engineering-aa",
+  "approval_reference": "2026-10-30 isolated native replay engineering scope",
+  "source_config": null,
+  "source_config_sha256": null,
+  "checkpoint_audit": null,
+  "checkpoint": null,
+  "batch": null,
+  "score": null,
+  "output": null,
+  "checkpoint_output": null,
+  "logs": null
+}

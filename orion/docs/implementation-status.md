@@ -41,9 +41,11 @@ an untested 25+25 resume strategy.
 - E5 update_probe now provides offline bundle freezing, score alignment, checkpoint
   structure/content auditing, branch planning and descriptive comparisons. E6
   confirmation provides protocol/task-list locking and integrity verification.
-  Native Experience capture/reconstruction, real update replay and formal E5/E6
-  execution remain unimplemented/unrun and need the staged approvals described in
-  native_update_path.md. No mock update or success-returning execution stub exists.
+  Subsequently approved native Experience codec, isolated replay and per-worker
+  optimizer/scheduler/order hooks are implemented for explicit engineering A/A only.
+  Real fresh-data capture, GPU restore/update, backend parity and A/A comparison
+  remain unvalidated. Formal E5/E6 runs remain unsubmitted and separately authorized.
+  See native-replay-usage.md; no mock update or success-returning execution stub exists.
 - No automatic resubmission, background cluster monitor or live-checkpoint export
   is enabled. A new attempt follows inspection of failed/ambiguous registry entries.
   Export only after checkpoint writers have stopped.

@@ -44,7 +44,21 @@ python -m opd_pilot.records /path/to/run/records
 This checks completion counts, duplicate IDs and references from turns to episodes
 and updates to consumed turns across shards. It does not merge or modify evidence.
 
+After all producers stop, a separate compute-node job can merge closed shards:
+
+```bash
+python -m opd_pilot.merge_records /path/to/run/records /path/to/run/records-merged
+```
+
+The destination must be outside the source directory and must not exist. The
+merge audits IDs/references first, copies original lines in shard-name order with
+bounded copying memory, and audits the result before publishing the destination.
+Ordering is deterministic, not chronological. Metadata lists source shard names.
+Source evidence remains untouched. A failed merge leaves a readable
+`records-merged.in-progress` directory for inspection; it is not silently reused.
+The audit retains ID sets in memory, so total memory still grows with record count.
+
 Remaining P02 work: approved integration at actual model/trainer call sites,
-compact array storage (NPZ/Parquet), prompt deduplication and offline merge.
+compact array storage (NPZ/Parquet) and prompt deduplication.
 Version 1 stores arrays inline in JSONL for a small pilot, so it is not yet the
 large-run storage implementation. File and directory names contain no hashes.

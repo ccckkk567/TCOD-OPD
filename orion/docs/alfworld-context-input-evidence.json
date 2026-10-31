@@ -1,0 +1,113 @@
+{
+  "source": "deterministic simulated workflow; not GPU results",
+  "turns": [
+    {
+      "step": 1,
+      "messages": [
+        {
+          "role": "user",
+          "content": "\nYou are an expert agent operating in the ALFRED Embodied Environment. Your task is to: TASK_SENTINEL\nPrior to this step, you have already taken 0 step(s). Below are the most recent 0 observations and the corresponding actions you took: \nYou are now at step 1 and your current observation is: OBS_0_SENTINEL Your task is to: TASK_SENTINEL\nYour admissible actions of the current situation are: ['cmd_0'].\n\nNow it's your turn to take an action.\nYou should first reason step-by-step about the current situation. This reasoning process MUST be enclosed within <think> </think> tags. \nOnce you've finished your reasoning, you should choose an admissible action for current step and present it within <action> </action> tags.\n"
+        }
+      ],
+      "P": 5,
+      "N": 8,
+      "R": 3,
+      "teacher_ids_equal": true,
+      "slice_start": 4,
+      "teacher_scores": [
+        4,
+        5,
+        6
+      ],
+      "action_mask": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "step": 2,
+      "messages": [
+        {
+          "role": "user",
+          "content": "\nYou are an expert agent operating in the ALFRED Embodied Environment. Your task is to: TASK_SENTINEL\nPrior to this step, you have already taken 1 step(s). Below are the most recent 1 observations and the corresponding actions you took: [Observation 1: 'OBS_0_SENTINEL Your task is to: TASK_SENTINEL', Action 1: 'ACTION_0_SENTINEL']\nYou are now at step 2 and your current observation is: OBS_1_SENTINEL\nYour admissible actions of the current situation are: ['cmd_1'].\n\nNow it's your turn to take an action.\nYou should first reason step-by-step about the current situation. This reasoning process MUST be enclosed within <think> </think> tags. \nOnce you've finished your reasoning, you should choose an admissible action for current step and present it within <action> </action> tags.\n"
+        }
+      ],
+      "P": 6,
+      "N": 10,
+      "R": 4,
+      "teacher_ids_equal": true,
+      "slice_start": 5,
+      "teacher_scores": [
+        5,
+        6,
+        7,
+        8
+      ],
+      "action_mask": [
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "step": 3,
+      "messages": [
+        {
+          "role": "user",
+          "content": "\nYou are an expert agent operating in the ALFRED Embodied Environment. Your task is to: TASK_SENTINEL\nPrior to this step, you have already taken 2 step(s). Below are the most recent 2 observations and the corresponding actions you took: [Observation 1: 'OBS_0_SENTINEL Your task is to: TASK_SENTINEL', Action 1: 'ACTION_0_SENTINEL']\n[Observation 2: 'OBS_1_SENTINEL', Action 2: 'ACTION_1_SENTINEL']\nYou are now at step 3 and your current observation is: OBS_2_SENTINEL\nYour admissible actions of the current situation are: ['cmd_2'].\n\nNow it's your turn to take an action.\nYou should first reason step-by-step about the current situation. This reasoning process MUST be enclosed within <think> </think> tags. \nOnce you've finished your reasoning, you should choose an admissible action for current step and present it within <action> </action> tags.\n"
+        }
+      ],
+      "P": 7,
+      "N": 12,
+      "R": 5,
+      "teacher_ids_equal": true,
+      "slice_start": 6,
+      "teacher_scores": [
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "action_mask": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "step": 4,
+      "messages": [
+        {
+          "role": "user",
+          "content": "\nYou are an expert agent operating in the ALFRED Embodied Environment. Your task is to: TASK_SENTINEL\nPrior to this step, you have already taken 3 step(s). Below are the most recent 2 observations and the corresponding actions you took: [Observation 2: 'OBS_1_SENTINEL', Action 2: 'ACTION_1_SENTINEL']\n[Observation 3: 'OBS_2_SENTINEL', Action 3: 'ACTION_2_SENTINEL']\nYou are now at step 4 and your current observation is: OBS_3_SENTINEL\nYour admissible actions of the current situation are: ['cmd_3'].\n\nNow it's your turn to take an action.\nYou should first reason step-by-step about the current situation. This reasoning process MUST be enclosed within <think> </think> tags. \nOnce you've finished your reasoning, you should choose an admissible action for current step and present it within <action> </action> tags.\n"
+        }
+      ],
+      "P": 8,
+      "N": 14,
+      "R": 6,
+      "teacher_ids_equal": true,
+      "slice_start": 7,
+      "teacher_scores": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "action_mask": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  ]
+}

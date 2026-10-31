@@ -1,0 +1,10 @@
+{
+  "run_name": "alfworld-s17-two-gpu-pilot-context-h2",
+  "student": "s17",
+  "teacher": "t08",
+  "phase": "pilot",
+  "train_tasks": "/scratch/prjsnnn0000269/Students/shuming/storage_ext/cjk/outputs/tcod-opd/protocols/alfworld/pilot-v1/train_pilot.jsonl",
+  "output": "orion/generated/alfworld-s17-context-h2-pilot",
+  "layout": "two-gpu-shared-inference",
+  "context_mode": "per_step_h2"
+}

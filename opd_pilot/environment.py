@@ -7,13 +7,24 @@ from copy import deepcopy
 class Episode:
     """Keep diagnostic environment state and full assistant history together."""
 
-    def __init__(self, benchmark, task_desc, max_steps, utilities=None):
+    def __init__(
+        self, benchmark, task_desc, max_steps, utilities=None, context_mode="legacy_accumulated"
+    ):
         if benchmark not in ("alfworld", "webshop", "scienceworld"):
             raise ValueError("Unknown benchmark")
         self.benchmark, self.max_steps = benchmark, max_steps
         self.u = utilities or importlib.import_module(
             f"trinity.common.workflows.envs.TCOD.{benchmark}.utils"
         )
+        self.context_mode = context_mode
+        if benchmark == "alfworld" and context_mode != "legacy_accumulated":
+            from trinity.common.workflows.envs.TCOD.alfworld.context import (
+                validate_context_mode,
+            )
+
+            validate_context_mode(context_mode)
+        elif context_mode != "legacy_accumulated":
+            raise ValueError("per_step_h2 is ALFWorld-only")
         self.env = None
         self.history, self.memory = [], []
         self.done, self.reward, self.best_score = False, None, None
@@ -47,6 +58,19 @@ class Episode:
             raise ValueError("Episode has ended")
         u, step = self.u, len(self.history)
         self.formatted = u.format_observation(self.observation)
+        if self.benchmark == "alfworld" and self.context_mode == "per_step_h2":
+            from trinity.common.workflows.envs.TCOD.alfworld.context import (
+                build_alfworld_step_messages,
+            )
+
+            self.pending_messages = build_alfworld_step_messages(
+                task_description=self.task_description,
+                observation=self.observation,
+                admissible_commands=self.info.get("admissible_commands", []),
+                history=self.history,
+                step_index=step,
+            )
+            return deepcopy(self.pending_messages)
         values = dict(
             task_description=self.task_description,
             current_observation=self.formatted,
@@ -79,7 +103,8 @@ class Episode:
     def apply(self, response):
         """Execute one full response, including its reasoning in subsequent history."""
         action = self.u.parse_action(response)
-        self.memory = self.pending_messages + [{"role": "assistant", "content": response}]
+        if self.context_mode == "legacy_accumulated":
+            self.memory = self.pending_messages + [{"role": "assistant", "content": response}]
         self.history.append(self.u._format_history(self.formatted, len(self.history) + 1, action))
         before, before_info = deepcopy(self.observation), deepcopy(self.info)
         valid, error = True, ""

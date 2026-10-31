@@ -55,6 +55,9 @@ class EpisodeTrace:
     """Observe existing calls without reinterpreting rewards or adding model calls."""
 
     def __init__(self, task, benchmark):
+        self.context_mode = getattr(task, "workflow_args", {}).get(
+            "context_mode", "legacy_accumulated"
+        )
         self.benchmark = benchmark
         self.writer = writer("explorer")
         self.uid = self.writer.path.name + "-episode"
@@ -96,6 +99,9 @@ class EpisodeTrace:
             "tokens": plain(response.tokens),
             "prompt_length": response.prompt_length,
             "response": response.response_text,
+            "truncate_status": getattr(response, "truncate_status", None),
+            "action_mask": plain(getattr(response, "action_mask", None)),
+            "context_mode": getattr(self, "context_mode", None),
             "action": None,
             "observation_before": self.observation,
             "info_before": self.info,

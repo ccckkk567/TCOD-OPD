@@ -129,6 +129,7 @@ def workflow(benchmark, calls, terminal=True, failure=None, invalid=False):
     exec(compile(ast.Module(body=[cls], type_ignores=[]), str(path), "exec"), scope)
     instance = scope[cls.name]()
     instance.task = NS(raw_task={"task_id": "task-1"}, task_desc="1")
+    instance.context_mode = "legacy_accumulated"
     instance.task_desc, instance.run_id_base = "1", 7
     instance.repeat_times = 2 if benchmark == "webshop" else 1
     instance.rollout_args = {"temperature": 0.7, "logprobs": None}

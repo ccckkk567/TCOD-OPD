@@ -65,11 +65,15 @@ def record_runtime(output, job, student, teacher, config):
 def run(config_path, validate_only=False):
     import ray
     import torch
+    import yaml
 
+    from opd_pilot.context_audit import audit_records, manifest, validate_config
     from trinity.cli.launcher import run_stage
     from trinity.common.config import load_config
     from trinity.utils.plugin_loader import load_plugins
 
+    raw_config = yaml.safe_load(Path(config_path).read_text())
+    context_run = validate_config(raw_config)
     job = os.environ["SLURM_JOB_ID"]
     load_plugins()
     config = load_config(str(config_path))
@@ -146,6 +150,11 @@ def run(config_path, validate_only=False):
             return
         (output / "step0-model.json").write_text(json.dumps(student, indent=2), encoding="utf-8")
         record_runtime(output, job, student, teacher, config)
+        if context_run:
+            manifest(
+                yaml.safe_load((output / "resolved-config.yaml").read_text()),
+                output / "context-manifest.json",
+            )
         run_stage(config)
     finally:
         failing = sys.exc_info()[0] is not None
@@ -161,6 +170,14 @@ def run(config_path, validate_only=False):
                 "Ray cleanup/log copy also failed; preserving the primary training error.",
                 file=sys.stderr,
             )
+    if context_run:
+        audit_records(
+            env["OPD_RECORD_ROOT"],
+            output / "context-audit.json",
+            reference_roots=[output.parent / "smoke-first/records"]
+            if config.continue_from_checkpoint
+            else (),
+        )
     completion_evidence(
         output,
         config.checkpoint_job_dir,

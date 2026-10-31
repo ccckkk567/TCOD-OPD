@@ -17,6 +17,8 @@ from opd_pilot.integration import plain
 
 def validate(spec):
     """Resolve a frozen task list and explicit evaluation sampling settings."""
+    if spec.get("context_mode", "legacy_accumulated") not in ("legacy_accumulated", "per_step_h2"):
+        raise ValueError("Unknown context_mode")
     manifest = model_manifest(spec["model_path"])
     if spec["benchmark"] not in ("alfworld", "webshop", "scienceworld"):
         raise ValueError("Unknown benchmark")
@@ -50,14 +52,23 @@ def rollout(spec, task, repeat, backend, factory=Episode):
     outcome = dict(task_success=None, technical_failure=True, termination_reason="exception")
     try:
         env = factory(
-            spec["benchmark"], task.get("task_desc", task.get("game_file")), spec["max_env_steps"]
+            spec["benchmark"],
+            task.get("task_desc", task.get("game_file")),
+            spec["max_env_steps"],
+            **({"context_mode": spec["context_mode"]} if "context_mode" in spec else {}),
         )
         for step in range(spec["max_env_steps"]):
             messages = env.prompt()
             prefix = backend.encode_messages(messages, spec.get("enable_thinking"))
             seed = sample_seed(spec["seed"], task["task_id"], repeat, step)
             response = backend.generate(prefix, spec, seed)
-            row = dict(messages=messages, prefix_tokens=prefix, seed=seed, **response)
+            row = dict(
+                messages=messages,
+                prefix_tokens=prefix,
+                seed=seed,
+                context_mode=spec.get("context_mode", "legacy_accumulated"),
+                **response,
+            )
             rows.append(row)
             row.update(env.apply(response["response_text"]))
             if env.done:
@@ -104,6 +115,7 @@ def write_records(directory, episodes, manifest, benchmark):
                     sampling_student_revision=manifest["revision"],
                     scoring_teacher_revision=None,
                     messages=turn["messages"],
+                    context_mode=turn.get("context_mode", "legacy_accumulated"),
                     tokens=prefix + response,
                     prompt_length=len(prefix),
                     response=turn["response_text"],

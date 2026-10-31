@@ -46,7 +46,10 @@ def branch(spec, candidate, history, target, task, repeat, backend, factory=Epis
     failure = None
     try:
         env = factory(
-            spec["benchmark"], task.get("task_desc", task.get("game_file")), spec["max_env_steps"]
+            spec["benchmark"],
+            task.get("task_desc", task.get("game_file")),
+            spec["max_env_steps"],
+            **({"context_mode": spec["context_mode"]} if "context_mode" in spec else {}),
         )
         restore(env, history, target)
         replayed = True

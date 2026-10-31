@@ -21,6 +21,13 @@ def configure(spec, template):
         config["trainer"]["ulysses_sequence_parallel_size"] = 1
     elif spec.get("layout") is not None:
         raise ValueError("Unknown approved resource layout")
+    if spec.get("context_mode") is not None:
+        if spec["context_mode"] != "per_step_h2":
+            raise ValueError("New context runs require per_step_h2")
+        source = config["buffer"]["explorer_input"]
+        for task in [source["taskset"]] + source.get("eval_tasksets", []):
+            task.setdefault("workflow_args", {})["context_mode"] = "per_step_h2"
+        config["buffer"]["trainer_input"]["experience_buffer"]["name"] = spec["run_name"]
     phase = spec["phase"]
     if phase not in ("smoke-first", "smoke-resume", "pilot"):
         raise ValueError("Unknown approved phase")

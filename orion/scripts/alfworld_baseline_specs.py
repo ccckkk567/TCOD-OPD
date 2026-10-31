@@ -8,7 +8,9 @@ from pathlib import Path
 from opd_pilot.prepare import validate_splits
 
 
-def prepare(protocol, output, models):
+def prepare(protocol, output, models, context_mode="legacy_accumulated"):
+    if context_mode not in ("legacy_accumulated", "per_step_h2"):
+        raise ValueError("Unknown ALFWorld context_mode")
     validate_splits(protocol)
     rows = [json.loads(line) for line in (protocol / "analysis_dev.jsonl").read_text().splitlines()]
     if len(rows) < 32:
@@ -21,6 +23,7 @@ def prepare(protocol, output, models):
     for key, name in (("s17", "Qwen3-1.7B"), ("t08", "Qwen3-8B")):
         spec = dict(
             benchmark="alfworld",
+            context_mode=context_mode,
             model_path=str(models / name),
             tasks=str(tasks),
             output=str(output.parent / (output.name + "-" + key)),
@@ -41,5 +44,10 @@ if __name__ == "__main__":
     parser.add_argument("--protocol", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--models", type=Path, required=True)
+    parser.add_argument(
+        "--context-mode",
+        choices=("legacy_accumulated", "per_step_h2"),
+        default="legacy_accumulated",
+    )
     args = parser.parse_args()
-    prepare(args.protocol, args.output, args.models)
+    prepare(args.protocol, args.output, args.models, args.context_mode)

@@ -5,9 +5,9 @@ Reference: OnPolicyDistillWorkflow logic; adapted for multi-turn AlfWorld.
 
 Algorithm:
 1. Student pre-samples trajectory (runs episode turn-by-turn with logprobs)
-2. Split by turns: each turn has fixed prefix [system, obs_1, resp_1, ..., obs_t]
+2. One Experience per turn; prefix follows the explicit context_mode
 3. Teacher computes logprobs on same (prefix + response) per turn
-4. Store teacher_logprobs in experience; advantage_fn uses teacher_logprobs - student_logprobs
+4. Store teacher_logprobs in experience; advantage_fn uses teacher and configured old-policy logprobs
 5. Return one Experience per turn (like OPD returning one per sample)
 """
 
@@ -18,6 +18,10 @@ from opd_pilot.integration import episode_trace
 from trinity.common.experience import Experience
 from trinity.common.models.model import ModelWrapper
 from trinity.common.workflows import WORKFLOWS, Task, Workflow
+from trinity.common.workflows.envs.TCOD.alfworld.context import (
+    build_alfworld_step_messages,
+    validate_context_mode,
+)
 from trinity.common.workflows.envs.TCOD.alfworld.utils import (
     ALFWORLD_TEMPLATE,
     ALFWORLD_TEMPLATE_NO_HIS,
@@ -36,7 +40,7 @@ class OnPolicyDistillVerlAgentAlfworldWorkflow(Workflow):
 
     Computes and stores teacher_logprobs in each turn's experience.
     The advantage_fn in trainer will compute:
-        advantages = teacher_logprobs - student_logprobs
+        advantages use teacher_logprobs and old_log_probs (which may be recomputed)
 
     Use advantage_fn: multi_turn_opd (MultiTurnOpdAdvantage) for this workflow,
     since it returns List[Experience] (one per turn), not a single response.
@@ -79,6 +83,8 @@ class OnPolicyDistillVerlAgentAlfworldWorkflow(Workflow):
 
         Unlike BaseSimpleWorkflow, this does NOT require reward_fn.
         """
+        mode = validate_context_mode(task.workflow_args.get("context_mode", "legacy_accumulated"))
+        self.context_mode = mode
         self.task = task
         self.format_args = task.format_args
         self.raw_task = task.raw_task
@@ -138,34 +144,42 @@ class OnPolicyDistillVerlAgentAlfworldWorkflow(Workflow):
 
         for r in range(self.max_env_steps):
             format_obs = format_observation(observation)
-            admissible_commands = info.get("admissible_commands", [])
-            if admissible_commands and isinstance(admissible_commands[0], list):
-                admissible_commands = admissible_commands[0]
-            reformatted_admissible = "\n ".join(
-                f"'{s}'" for s in admissible_commands if s != "help"
-            )
-
-            if len(history) < HISTORY_LENGTH:
-                user_content = ALFWORLD_TEMPLATE_NO_HIS.format(
-                    current_observation=format_obs,
-                    admissible_actions=reformatted_admissible,
+            if self.context_mode == "per_step_h2":
+                memory = build_alfworld_step_messages(
+                    task_description=task_description,
+                    observation=observation,
+                    admissible_commands=info.get("admissible_commands", []),
+                    history=history,
+                    step_index=r,
                 )
             else:
-                action_history_str = "\n".join(
-                    history[-HISTORY_LENGTH:] if len(history) >= HISTORY_LENGTH else history
-                )
-                user_content = ALFWORLD_TEMPLATE.format(
-                    task_description=task_description,
-                    step_count=r,
-                    history_length=min(HISTORY_LENGTH, len(history)),
-                    action_history=action_history_str,
-                    current_step=r + 1,
-                    current_observation=format_obs,
-                    admissible_actions=reformatted_admissible,
+                admissible_commands = info.get("admissible_commands", [])
+                if admissible_commands and isinstance(admissible_commands[0], list):
+                    admissible_commands = admissible_commands[0]
+                reformatted_admissible = "\n ".join(
+                    f"'{s}'" for s in admissible_commands if s != "help"
                 )
 
-            memory = memory + [{"role": "user", "content": user_content}]
+                if len(history) < HISTORY_LENGTH:
+                    user_content = ALFWORLD_TEMPLATE_NO_HIS.format(
+                        current_observation=format_obs,
+                        admissible_actions=reformatted_admissible,
+                    )
+                else:
+                    action_history_str = "\n".join(
+                        history[-HISTORY_LENGTH:] if len(history) >= HISTORY_LENGTH else history
+                    )
+                    user_content = ALFWORLD_TEMPLATE.format(
+                        task_description=task_description,
+                        step_count=r,
+                        history_length=min(HISTORY_LENGTH, len(history)),
+                        action_history=action_history_str,
+                        current_step=r + 1,
+                        current_observation=format_obs,
+                        admissible_actions=reformatted_admissible,
+                    )
 
+                memory = memory + [{"role": "user", "content": user_content}]
             # Step 1: Student samples this turn (same pattern as OnPolicyDistillWorkflow)
             if trace is not None:
                 trace.prompt(memory, kwargs)
@@ -174,7 +188,8 @@ class OnPolicyDistillVerlAgentAlfworldWorkflow(Workflow):
             if trace is not None:
                 trace.generated(response)
             response_text = response.response_text or ""
-            memory.append({"role": "assistant", "content": response_text})
+            if self.context_mode == "legacy_accumulated":
+                memory.append({"role": "assistant", "content": response_text})
 
             if response.logprobs is None:
                 raise RuntimeError(
@@ -201,7 +216,7 @@ class OnPolicyDistillVerlAgentAlfworldWorkflow(Workflow):
 
         # Step 2 & 3: Teacher logprobs and fill experience (mirror OnPolicyDistillWorkflow.run_async)
         # response.tokens is the full sequence for this turn: [prefix | response], where
-        # prefix = system + obs_1 + resp_1 + ... + obs_t (same input as student had).
+        # prefix is the actual student input for the selected context mode; IDs are reused.
         per_turn_kl_sums: List[float] = []
         if trace is not None:
             trace.scoring(self.temperature)

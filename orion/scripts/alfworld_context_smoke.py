@@ -74,6 +74,15 @@ class GuardedTeacher:
         return scores
 
 
+async def prepare_wrappers(actors, wrapper_factory):
+    """Match Explorer: prepare engines before querying their API endpoints."""
+    await asyncio.gather(*(actor.prepare.remote() for actor in actors))
+    wrappers = [wrapper_factory(actor) for actor in actors]
+    for wrapper in wrappers:
+        await wrapper.prepare()
+    return wrappers
+
+
 async def exercise(config, output, report):
     from trinity.common.models.model import ModelWrapper
     from trinity.common.models.vllm_model import vLLMRolloutModel
@@ -84,9 +93,7 @@ async def exercise(config, output, report):
     )
 
     students, teachers = create_shared_inference(config, vLLMRolloutModel)
-    student, teacher = ModelWrapper(students[0]), ModelWrapper(teachers[0][0])
-    await student.prepare()
-    await teacher.prepare()
+    student, teacher = await prepare_wrappers([students[0], teachers[0][0]], ModelWrapper)
     taskset = config.buffer.explorer_input.tasksets[0]
     tasks = [
         json.loads(line) for line in Path(taskset.path).read_text().splitlines() if line.strip()
@@ -150,8 +157,8 @@ def main():
         ):
             raise ValueError("Acceptance requires the approved two H200 allocation")
         config = load_config(str(args.config))
-        config.name += "-context-check"
-        config.ray_namespace += "-context-check"
+        config.name += "-context-check-" + os.environ["SLURM_JOB_ID"]
+        config.ray_namespace += "-context-check-" + os.environ["SLURM_JOB_ID"]
         logdir = Path(os.environ["LOG_ROOT"]) / "context" / os.environ["SLURM_JOB_ID"]
         logdir.mkdir(parents=True, exist_ok=True)
         config.log.save_dir = str(logdir)

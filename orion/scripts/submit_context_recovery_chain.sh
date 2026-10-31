@@ -20,7 +20,6 @@ for run in alfworld-s17-two-gpu-smoke-context-h2 alfworld-s17-two-gpu-pilot-cont
   test ! -e "$OUTPUT_ROOT/$run" || { echo "Run already exists: $run"; exit 1; }
   test ! -e "$CHECKPOINT_ROOT/$run" || { echo "Checkpoint run already exists: $run"; exit 1; }
 done
-test ! -e "$REPORT_ROOT/alfworld-context-h2-acceptance" || { echo "Context acceptance report already exists"; exit 1; }
 for model in Qwen3-1.7B Qwen3-8B; do test -f "$MODEL_ROOT/$model/READY.json"; done
 mkdir -p "$LOG_ROOT/env" "$LOG_ROOT/train"
 registry="$checkout-jobs.txt"

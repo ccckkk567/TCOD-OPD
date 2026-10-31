@@ -37,4 +37,4 @@ export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
 export TMPDIR="/tmp/opd-work-$SLURM_JOB_ID"
 mkdir -p "$TMPDIR"
 python -m orion.scripts.alfworld_context_smoke --config "$config" \
-  --output "$REPORT_ROOT/alfworld-context-h2-acceptance"
+  --output "$REPORT_ROOT/alfworld-context-h2-acceptance-$SLURM_JOB_ID"

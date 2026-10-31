@@ -230,6 +230,36 @@ class ContextTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             require_valid_response(dummy)
 
+    def test_engine_preparation_precedes_wrapper_endpoint_lookup(self):
+        from orion.scripts.alfworld_context_smoke import prepare_wrappers
+
+        actors = [NS(ready=False), NS(ready=False)]
+
+        async def prepare(actor):
+            await asyncio.sleep(0)
+            actor.ready = True
+
+        for actor in actors:
+            actor.prepare = NS(remote=lambda actor=actor: prepare(actor))
+
+        class Wrapper:
+            def __init__(self, actor):
+                self.actor = actor
+
+            async def prepare(self):
+                if not all(actor.ready for actor in actors):
+                    raise RuntimeError("Model is not prepared")
+
+        wrappers = asyncio.run(prepare_wrappers(actors, Wrapper))
+        self.assertEqual([wrapper.actor for wrapper in wrappers], actors)
+
+        async def fail():
+            raise RuntimeError("Engine initialization failed")
+
+        actors[0].prepare = NS(remote=fail)
+        with self.assertRaisesRegex(RuntimeError, "Engine initialization failed"):
+            asyncio.run(prepare_wrappers(actors, Wrapper))
+
     def test_dummy_guard_prevents_action(self):
         from orion.scripts.alfworld_context_smoke import GuardedStudent
 

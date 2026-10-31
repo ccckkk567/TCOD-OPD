@@ -45,3 +45,9 @@ Remote evidence:
 
 Two history entries do not imply fixed token length. Independent observation/action lists may still overflow; do not silently enlarge budgets, omit actions or disable checks. Dummy masks are zero in original Experience; earlier claims of guaranteed dummy-token learning were incorrect. Dummy can still affect environment calls and unmasked workflow KL statistics; this patch preserves that production behavior and audits it.
 Done-to-reward=1 interpretation remains upstream; benchmark success is not certified by this context fix. Workflow temperature/max steps reset behavior is unchanged and effective settings are recorded. Teacher/student tokenizer compatibility must pass on HPC. Legacy rollback means selecting `legacy_accumulated` in a separately named run; never resume across context protocols.
+
+## Native acceptance retry: job 183024
+
+The engines loaded successfully, but the harness omitted actor.prepare() before ModelWrapper.prepare() queried get_api_server_url. No episode ran and no training updates occurred. The fix mirrors Explorer.prepare: await both actor preparations (including vLLM patches/API setup), then prepare wrappers. An initialization-order/failure-propagation regression test covers this harness mistake. Context construction and production training are unchanged.
+
+Acceptance reports and validation checkpoint namespace now include the Slurm job ID, preserving the failed report. Replacement dependencies are submitted only when no prior opd-* jobs remain; no automatic cancellation of unrelated jobs. New evidence path: reports/tcod-opd/alfworld-context-h2-acceptance-<job>/evidence.json. Native revalidation remains pending user execution.

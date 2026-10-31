@@ -120,7 +120,9 @@ def run(config_path, validate_only=False):
         raise ValueError("The approved 2+2 smoke requires its first segment checkpoint")
     logs = Path(os.environ["LOG_ROOT"]) / config.name / job
     logs.mkdir(parents=True, exist_ok=False)
-    config.log.save_dir = str(checkpoint / "log")
+    log_target = logs / "trinity"
+    log_target.mkdir(parents=True, exist_ok=True)
+    config.log.save_dir = str(log_target)
     runtime_env = {**config.get_envs(), **{key: env[key] for key in required}}
     temporary = Path("/tmp") / ("opd-" + job)
     try:
@@ -134,13 +136,9 @@ def run(config_path, validate_only=False):
             runtime_env={"env_vars": runtime_env},
         )
         config.check_and_update()
-        log_link = Path(config.log.save_dir)
-        log_target = Path(os.environ["LOG_ROOT"]) / config.name / "trinity"
-        log_target.mkdir(parents=True, exist_ok=True)
-        if not log_link.exists():
-            log_link.symlink_to(log_target, target_is_directory=True)
-        elif log_link.resolve() != log_target.resolve():
-            raise ValueError("Existing TCOD log path is not routed to the requested logs root")
+        # Validator resets save_dir to checkpoint/log. Keep both actor config and
+        # Ray's already-published TRINITY_LOG_DIR on a stable per-job logs path.
+        config.log.save_dir = str(log_target)
         config.save(
             str(output / ("validated-preview.yaml" if validate_only else "resolved-config.yaml"))
         )

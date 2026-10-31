@@ -25,6 +25,9 @@ exec 9>"$ENV_ROOT/tcod-opd.install.lock"
 flock -s -n 9 || { echo 'Shared environment is being modified'; exit 75; }
 source "$ENV_ROOT/tcod-opd/bin/activate"
 source "$CREDENTIALS_FILE"
+# Project is supplied explicitly by the monitor. Some SDK settings versions
+# interpret SWANLAB_PROJECT as structured JSON rather than a plain project name.
+unset SWANLAB_PROJECT
 # H200 is CUDA. Preserve Slurm's CUDA assignment; inherited ROCm selectors make
 # veRL reject worker initialization when CUDA_VISIBLE_DEVICES is also present.
 unset ROCR_VISIBLE_DEVICES HIP_VISIBLE_DEVICES

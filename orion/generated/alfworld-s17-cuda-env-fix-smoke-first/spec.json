@@ -1,0 +1,9 @@
+{
+  "run_name": "alfworld-s17-two-gpu-smoke-cuda-env-fix",
+  "student": "s17",
+  "teacher": "t08",
+  "phase": "smoke-first",
+  "train_tasks": "/scratch/prjsnnn0000269/Students/shuming/storage_ext/cjk/outputs/tcod-opd/protocols/alfworld/pilot-v1/train_pilot.jsonl",
+  "output": "orion/generated/alfworld-s17-cuda-env-fix-smoke-first",
+  "layout": "two-gpu-shared-inference"
+}

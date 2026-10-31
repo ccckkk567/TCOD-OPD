@@ -25,6 +25,9 @@ exec 9>"$ENV_ROOT/tcod-opd.install.lock"
 flock -s -n 9 || { echo 'Shared environment is being modified'; exit 75; }
 source "$ENV_ROOT/tcod-opd/bin/activate"
 source "$CREDENTIALS_FILE"
+# H200 is CUDA. Preserve Slurm's CUDA assignment; inherited ROCm selectors make
+# veRL reject worker initialization when CUDA_VISIBLE_DEVICES is also present.
+unset ROCR_VISIBLE_DEVICES HIP_VISIBLE_DEVICES
 export PYTHONPATH="$PWD:$ORION_ROOT/code/webshop"
 export ALFWORLD_DATA="$DATA_ROOT/alfworld"
 export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1

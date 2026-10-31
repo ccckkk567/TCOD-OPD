@@ -53,6 +53,9 @@ def create_shared_inference(config, engine_cls):
                 namespace=config.ray_namespace,
                 num_cpus=0,
                 num_gpus=0.5,
+                # EngineCore is a spawned non-Ray process. Its first ray.get_actor
+                # must join this job, not auto-start another local cluster.
+                runtime_env={"env_vars": {"RAY_ADDRESS": ray.get_runtime_context().gcs_address}},
                 scheduling_strategy=PlacementGroupSchedulingStrategy(
                     placement_group=pg,
                     placement_group_capture_child_tasks=True,

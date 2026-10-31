@@ -76,6 +76,7 @@ class SharedInferenceTests(unittest.TestCase):
         pg = Mock()
         pg.ready.return_value = "ready"
         ray = Mock()
+        ray.get_runtime_context.return_value.gcs_address = "10.0.0.1:12345"
 
         def get(ref, **kwargs):
             events.append("get")
@@ -102,6 +103,7 @@ class SharedInferenceTests(unittest.TestCase):
         self.assertEqual((len(students), len(teachers[0])), (1, 1))
         for option in options:
             self.assertEqual(option["num_gpus"], 0.5)
+            self.assertEqual(option["runtime_env"]["env_vars"]["RAY_ADDRESS"], "10.0.0.1:12345")
             self.assertIs(option["scheduling_strategy"].placement_group, pg)
             self.assertEqual(option["scheduling_strategy"].placement_group_bundle_index, 0)
 

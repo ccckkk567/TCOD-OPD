@@ -12,7 +12,7 @@ from flash_attn import flash_attn_func
 
 def main():
     assert torch.cuda.is_available(), "CUDA unavailable"
-    for name in ("vllm", "verl", "ray", "swanlab", "trinity"):
+    for name in ("vllm", "verl", "ray", "swanlab", "trinity", "datasets", "pyarrow"):
         importlib.import_module(name)
     torch.manual_seed(42)
     q, k, v = [

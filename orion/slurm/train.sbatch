@@ -32,7 +32,7 @@ export TMPDIR="/tmp/opd-work-$SLURM_JOB_ID"
 mkdir -p "$TMPDIR"
 if [[ -n "${3:-}" ]]; then
     python -m orion.scripts.pilot_recovery_gate \
-      --run "$OUTPUT_ROOT/alfworld-s17-two-gpu-smoke" --job "$3" \
+      --run "${4:-$OUTPUT_ROOT/alfworld-s17-two-gpu-smoke}" --job "$3" \
       --report "$REPORT_ROOT/alfworld-s17-two-gpu-pilot/recovery-gate-$SLURM_JOB_ID.json"
 fi
 stop_file=$(python - "$config" <<'PY'

@@ -6,3 +6,5 @@ torchvision==0.23.0+cu128
 torchaudio==2.8.0+cu128
 transformers>=4.51.0,<5
 ray==2.50.0
+# Shared benchmark environment currently uses NumPy 1.26.4; Arrow 26 requires NumPy 2.
+pyarrow==21.0.0
